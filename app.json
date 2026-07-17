@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "SnapDone",
+    "slug": "snapdone",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/images/icon.png",
+    "scheme": "snapdone",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./src/assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0891B2"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.snapdone.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SnapDone uses your camera to capture receipts, flyers, notes, and other documents to turn them into actions.",
+        "NSPhotoLibraryUsageDescription": "SnapDone accesses your photo library to process screenshots, photos, and documents into actions.",
+        "NSMicrophoneUsageDescription": "SnapDone uses your microphone to capture voice notes and turn them into reminders and tasks.",
+        "NSRemindersUsageDescription": "SnapDone creates reminders from your captured documents and voice notes.",
+        "NSCalendarsUsageDescription": "SnapDone adds events from flyers, appointment cards, and travel confirmations to your calendar."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/images/adaptive-icon.png",
+        "backgroundColor": "#0891B2"
+      },
+      "package": "com.snapdone.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-camera",
+      "expo-image-picker",
+      "expo-av",
+      "expo-calendar",
+      [
+        "expo-notifications",
+        {
+          "icon": "./src/assets/images/notification-icon.png",
+          "color": "#0891B2"
+        }
+      ],
+      "expo-secure-store",
+      "expo-share-intent"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "owner": "snapdoneapp",
+    "extra": {
+      "eas": {
+        "projectId": "8a3c0241-28cc-4784-aa2f-a6f948c0bbfc"
+      }
+    }
+  }
+}
