@@ -1,5 +1,32 @@
 import { create } from "zustand";
-import * as SecureStore from "expo-secure-store";
+
+// Web-compatible storage fallback (SecureStore is native-only)
+const storage = {
+  async getItemAsync(key: string): Promise<string | null> {
+    try {
+      const { default: SecureStore } = await import("expo-secure-store");
+      return await SecureStore.getItemAsync(key);
+    } catch {
+      return localStorage.getItem(key);
+    }
+  },
+  async setItemAsync(key: string, value: string): Promise<void> {
+    try {
+      const { default: SecureStore } = await import("expo-secure-store");
+      return await SecureStore.setItemAsync(key, value);
+    } catch {
+      localStorage.setItem(key, value);
+    }
+  },
+  async deleteItemAsync(key: string): Promise<void> {
+    try {
+      const { default: SecureStore } = await import("expo-secure-store");
+      return await SecureStore.deleteItemAsync(key);
+    } catch {
+      localStorage.removeItem(key);
+    }
+  },
+};
 
 const AUTH_TOKEN_KEY = "snapdone_auth_token";
 const USER_KEY = "snapdone_user";
@@ -43,9 +70,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setToken: async (token: string | null) => {
     if (token) {
-      await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
+      await storage.setItemAsync(AUTH_TOKEN_KEY, token);
     } else {
-      await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+      await storage.deleteItemAsync(AUTH_TOKEN_KEY);
     }
     set({ token });
   },
@@ -60,8 +87,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   hydrate: async () => {
     try {
-      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-      const userJson = await SecureStore.getItemAsync(USER_KEY);
+      const token = await storage.getItemAsync(AUTH_TOKEN_KEY);
+      const userJson = await storage.getItemAsync(USER_KEY);
       const user = userJson ? JSON.parse(userJson) : null;
       set({ token, user, isLoading: false });
     } catch {
@@ -70,8 +97,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
-    await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
-    await SecureStore.deleteItemAsync(USER_KEY);
+    await storage.deleteItemAsync(AUTH_TOKEN_KEY);
+    await storage.deleteItemAsync(USER_KEY);
     set({ token: null, user: null, error: null });
   },
 }));

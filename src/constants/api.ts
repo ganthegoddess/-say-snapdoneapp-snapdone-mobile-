@@ -5,7 +5,7 @@ export const API_BASE_URL = "https://5f7a3e77abaf27c48a69cce1b874bb58.ctonew.app
 
 export const API_PREFIX = "/api/v1";
 
-export const FULL_API_URL = `${API_BASE_URL}${API_PREFIX}`;
+export const FULL_API_URL = API_BASE_URL;
 
 // Health check
 export const HEALTH = `${API_PREFIX}/health`;

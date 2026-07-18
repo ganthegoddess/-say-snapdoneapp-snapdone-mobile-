@@ -1,9 +1,18 @@
 import { post, get } from "./api";
 import { AUTH } from "../constants/api";
 import { useAuthStore, type User } from "../stores/authStore";
-import * as SecureStore from "expo-secure-store";
 
 const USER_KEY = "snapdone_user";
+
+// Web-compatible storage
+async function setSecurely(key: string, value: string) {
+  try {
+    const { default: SecureStore } = await import("expo-secure-store");
+    await SecureStore.setItemAsync(key, value);
+  } catch {
+    localStorage.setItem(key, value);
+  }
+}
 
 interface AuthResponse {
   user: {
@@ -49,7 +58,7 @@ export async function signup(params: SignupParams): Promise<User> {
     };
 
     await authStore.setToken(data.token);
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+    await setSecurely(USER_KEY, JSON.stringify(user));
     authStore.setUser(user);
     authStore.setIsSubmitting(false);
 
@@ -83,7 +92,7 @@ export async function signin(params: SigninParams): Promise<User> {
     };
 
     await authStore.setToken(data.token);
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+    await setSecurely(USER_KEY, JSON.stringify(user));
     authStore.setUser(user);
     authStore.setIsSubmitting(false);
 
