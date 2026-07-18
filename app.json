@@ -55,12 +55,6 @@
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "owner": "snapdoneapp",
-    "extra": {
-      "eas": {
-        "projectId": "8a3c0241-28cc-4784-aa2f-a6f948c0bbfc"
-      }
     }
   }
 }
