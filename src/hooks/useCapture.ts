@@ -49,6 +49,8 @@ export function useCapture() {
       setIsUploading(false);
 
       if (result.status === "completed" && result.action) {
+        // Brief pause so the processing screen can show the relief message
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         router.replace(`/action/${result.action.id}`);
       } else if (result.status === "failed") {
         setError(result.error_message || "Processing failed");

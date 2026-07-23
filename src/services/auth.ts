@@ -4,13 +4,14 @@ import { useAuthStore, type User } from "../stores/authStore";
 
 const USER_KEY = "snapdone_user";
 
-// Web-compatible storage
+// In-memory storage fallback
+const memoryStore = new Map<string, string>();
 async function setSecurely(key: string, value: string) {
   try {
     const { default: SecureStore } = await import("expo-secure-store");
     await SecureStore.setItemAsync(key, value);
   } catch {
-    localStorage.setItem(key, value);
+    memoryStore.set(key, value);
   }
 }
 

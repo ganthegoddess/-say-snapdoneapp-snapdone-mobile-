@@ -37,7 +37,7 @@ const STATUS_MAP: Record<string, "pending" | "confirmed" | "dismissed"> = {
 
 export default function HomeScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
-  const { data: actions, isLoading } = useActions();
+  const { data: actions, isLoading, isError, refetch } = useActions();
   const completeAction = useCompleteAction();
   const deleteAction = useDeleteAction();
 
@@ -104,6 +104,15 @@ export default function HomeScreen() {
             <Skeleton lines={2} />
             <Skeleton lines={3} />
           </>
+        ) : isError ? (
+          <View style={styles.homeError}>
+            <Text style={styles.homeErrorIcon}>⚠️</Text>
+            <Text style={styles.homeErrorTitle}>Could not load actions</Text>
+            <Text style={styles.homeErrorText}>Server unavailable. Please try again.</Text>
+            <TouchableOpacity style={styles.homeRetryBtn} onPress={() => refetch()}>
+              <Text style={styles.homeRetryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
         ) : filteredActions.length === 0 ? (
           <EmptyState
             icon="📸"
@@ -173,4 +182,10 @@ const styles = StyleSheet.create({
   segTextActive: { color: colors.white },
   feed: { flex: 1, paddingHorizontal: 16 },
   sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.deep, marginBottom: 12, marginTop: 8 },
+  homeError: { alignItems: "center", justifyContent: "center", paddingVertical: 60, paddingHorizontal: 32 },
+  homeErrorIcon: { fontSize: 40, marginBottom: 12 },
+  homeErrorTitle: { fontSize: 18, fontWeight: "700", color: colors.deep, marginBottom: 8, textAlign: "center" },
+  homeErrorText: { fontSize: 14, color: colors.text.muted, textAlign: "center", lineHeight: 20, marginBottom: 20 },
+  homeRetryBtn: { backgroundColor: colors.brand.primary, paddingVertical: 10, paddingHorizontal: 28, borderRadius: 10 },
+  homeRetryBtnText: { color: colors.white, fontSize: 15, fontWeight: "600" },
 });

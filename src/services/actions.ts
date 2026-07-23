@@ -11,8 +11,10 @@ export interface ActionItem {
   due_date?: string;
   location?: string;
   amount?: number;
+  confidence_score?: number;
   household_id?: string;
   assignee_id?: string;
+  scheduling_suggestions?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -87,4 +89,13 @@ export async function completeAction(id: string): Promise<{ id: string; status: 
  */
 export async function deleteAction(id: string): Promise<{ id: string; status: string }> {
   return del(ACTIONS.DETAIL(id));
+}
+/** Schedule a dateless action by setting its due_date. */
+export async function scheduleAction(
+  id: string,
+  dueDate: string,
+  chosenSuggestion: string,
+  source: "suggested" | "custom_date"
+): Promise<ActionItem> {
+  return patch<ActionItem>(ACTIONS.SCHEDULE(id), { due_date: dueDate, chosen_suggestion: chosenSuggestion, source });
 }

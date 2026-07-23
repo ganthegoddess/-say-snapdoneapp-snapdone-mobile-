@@ -1,13 +1,14 @@
 import { create } from "zustand";
 
-// Web-compatible storage fallback (SecureStore is native-only)
+// In-memory storage fallback (for environments where SecureStore is unavailable)
+const memoryStore = new Map<string, string>();
 const storage = {
   async getItemAsync(key: string): Promise<string | null> {
     try {
       const { default: SecureStore } = await import("expo-secure-store");
       return await SecureStore.getItemAsync(key);
     } catch {
-      return localStorage.getItem(key);
+      return memoryStore.get(key) ?? null;
     }
   },
   async setItemAsync(key: string, value: string): Promise<void> {
@@ -15,7 +16,7 @@ const storage = {
       const { default: SecureStore } = await import("expo-secure-store");
       return await SecureStore.setItemAsync(key, value);
     } catch {
-      localStorage.setItem(key, value);
+      memoryStore.set(key, value);
     }
   },
   async deleteItemAsync(key: string): Promise<void> {
@@ -23,7 +24,7 @@ const storage = {
       const { default: SecureStore } = await import("expo-secure-store");
       return await SecureStore.deleteItemAsync(key);
     } catch {
-      localStorage.removeItem(key);
+      memoryStore.delete(key);
     }
   },
 };

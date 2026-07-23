@@ -29,6 +29,8 @@ export const ACTIONS = {
   LIST: `${API_PREFIX}/actions`,
   DETAIL: (id: string) => `${API_PREFIX}/actions/${id}`,
   COMPLETE: (id: string) => `${API_PREFIX}/actions/${id}/complete`,
+  ACKNOWLEDGE: (id: string) => `${API_PREFIX}/actions/${id}/acknowledge`,
+  SCHEDULE: (id: string) => `${API_PREFIX}/actions/${id}/schedule`,
 } as const;
 
 // Household endpoints
@@ -75,6 +77,6 @@ export const UPLOAD_LIMITS = {
 
 // Free tier limits
 export const FREE_TIER = {
-  MAX_CAPTURES_PER_MONTH: 10,
+  MAX_CAPTURES_PER_MONTH: 30,
   MAX_ACTIVE_ACTIONS: 5,
 } as const;

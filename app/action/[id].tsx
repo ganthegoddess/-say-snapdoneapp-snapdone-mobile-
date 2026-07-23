@@ -1,12 +1,19 @@
-import { useState, useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from "react-native";
+import { useState, useCallback, useEffect } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal } from "react-native";
 import { useLocalSearchParams, router, Link } from "expo-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors } from "../../src/constants/colors";
 import { Button } from "../../src/components/ui/Button";
 import { useAction, useUpdateAction } from "../../src/hooks/useActions";
+import * as actionsService from "../../src/services/actions";
 import { useNotifications } from "../../src/hooks/useNotifications";
 import { useCalendar } from "../../src/hooks/useCalendar";
 import { Skeleton } from "../../src/components/ui/Skeleton";
+import { useHouseholds, useHousehold, useAcknowledgeAction } from "../../src/hooks/useHouseholds";
+import { useAuthStore } from "../../src/stores/authStore";
+
+const NOTIF_EXPLAINER_KEY = "@snapdone/notif_explainer_seen";
 
 const CATEGORIES = [
   { key: "event", icon: "📅", label: "Calendar Event", color: colors.brand.primary },
@@ -24,34 +31,155 @@ const PRIORITIES = [
 
 export default function ActionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: action, isLoading } = useAction(id || "");
+  const { data: action, isLoading, isError, error, refetch } = useAction(id || "");
   const updateAction = useUpdateAction();
+
+  const queryClient = useQueryClient();
+  const scheduleMutation = useMutation({
+    mutationFn: ({ actionId, dueDate, chosenSuggestion, source }: { actionId: string; dueDate: string; chosenSuggestion: string; source: "suggested" | "custom_date" }) =>
+      actionsService.scheduleAction(actionId, dueDate, chosenSuggestion, source),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["action", id as string] });
+      queryClient.invalidateQueries({ queryKey: ["actions"] });
+    },
+  });
+
+  const calculateDateFromSuggestion = (suggestion: string): Date => {
+    const now = new Date();
+    const lower = suggestion.toLowerCase();
+    if (lower.includes("tomorrow")) { const d = new Date(now); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d; }
+    if (lower.includes("evening") || lower.includes("tonight")) { const d = new Date(now); d.setHours(18, 0, 0, 0); if (d <= now) d.setDate(d.getDate() + 1); return d; }
+    if (lower.includes("saturday")) { const d = new Date(now); const days = (6 - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate() + days); d.setHours(9, 0, 0, 0); return d; }
+    if (lower.includes("sunday")) { const d = new Date(now); const days = (7 - d.getDay()) % 7 || 7; d.setDate(d.getDate() + days); d.setHours(9, 0, 0, 0); return d; }
+    if (lower.includes("weekend")) { const d = new Date(now); const days = (6 - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate() + days); d.setHours(10, 0, 0, 0); return d; }
+    if (lower.includes("next week")) { const d = new Date(now); d.setDate(d.getDate() + 7); d.setHours(9, 0, 0, 0); return d; }
+    const d = new Date(now); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d;
+  };
+
+  const handleScheduleSuggestion = useCallback((suggestion: string, source: "suggested" | "custom_date" = "suggested") => {
+    const dueDate = calculateDateFromSuggestion(suggestion);
+    scheduleMutation.mutate({ actionId: id as string, dueDate: dueDate.toISOString(), chosenSuggestion: suggestion, source });
+  }, [id, scheduleMutation]);
+
+  const scheduleDismiss = useCallback(() => { refetch(); }, [refetch]);
+
   const { scheduleReminder, requestPermissions: requestNotifPermissions } = useNotifications();
   const { createEvent, requestPermissions: requestCalendarPermissions } = useCalendar();
+  const { data: households } = useHouseholds();
+  const activeHouseholdId = households?.[0]?.id;
+  const { data: householdDetails } = useHousehold(activeHouseholdId);
+  const acknowledgeAction = useAcknowledgeAction();
+  const currentUser = useAuthStore((s) => s.user);
+  const householdMembers = householdDetails?.members || [];
 
   const [confirmed, setConfirmed] = useState(false);
-  const [category, setCategory] = useState(action?.action_type || "event");
-  const [priority, setPriority] = useState(action?.priority || "medium");
+  const [category, setCategory] = useState<string>(action?.action_type || "event");
+  const [priority, setPriority] = useState<string>(action?.priority || "medium");
   const [addToCalendar, setAddToCalendar] = useState(true);
   const [shareWithHousehold, setShareWithHousehold] = useState(false);
+  const [assigneeId, setAssigneeId] = useState<string | null>(null);
+  const [showNotifExplainer, setShowNotifExplainer] = useState(false);
+  const [notifExplainerSeen, setNotifExplainerSeen] = useState(false);
+  const [pendingNotifFlow, setPendingNotifFlow] = useState(false);
+
+  // Auto-acknowledge shared actions assigned to current user
+  useEffect(() => {
+    if (action && action.assignee_id && currentUser && action.assignee_id === currentUser.id && action.status !== "completed") {
+      acknowledgeAction.mutate(action.id);
+    }
+  }, [action?.id, action?.assignee_id, currentUser?.id]);
+
+  // Check on mount if the notification explainer has been shown before
+  useEffect(() => {
+    AsyncStorage.getItem(NOTIF_EXPLAINER_KEY).then((val) => {
+      if (val === "true") {
+        setNotifExplainerSeen(true);
+      }
+    });
+  }, []);
+
+  const handleExplainerDone = useCallback(async () => {
+    setShowNotifExplainer(false);
+    setNotifExplainerSeen(true);
+    setPendingNotifFlow(false);
+    // Persist that the user has seen it
+    await AsyncStorage.setItem(NOTIF_EXPLAINER_KEY, "true");
+    // Now trigger the actual permission request
+    const hasPermission = await requestNotifPermissions();
+    // Schedule the reminder
+    if (hasPermission && action?.due_date) {
+      const reminderDate = new Date(new Date(action.due_date).getTime() - 15 * 60 * 1000);
+      if (reminderDate > new Date()) {
+        try {
+          await scheduleReminder({
+            title: `Reminder: ${action.title || "Untitled"}`,
+            body: action.description || "Tap to view details",
+            date: reminderDate,
+            actionId: id,
+          });
+        } catch (notifErr: any) {
+          console.warn("Failed to schedule notification:", notifErr);
+        }
+      }
+    }
+    // Add to calendar if toggled on
+    if (addToCalendar) {
+      const hasCalPermission = await requestCalendarPermissions();
+      if (hasCalPermission && action?.due_date) {
+        try {
+          await createEvent({
+            title: action.title || "Untitled Event",
+            notes: action.description || undefined,
+            startDate: new Date(action.due_date),
+            location: action.location || undefined,
+            alarms: [{ relativeOffset: -15 }],
+          });
+        } catch (calErr: any) {
+          console.warn("Failed to create calendar event:", calErr);
+        }
+      }
+    }
+    setConfirmed(true);
+  }, [requestNotifPermissions, scheduleReminder, action, id, addToCalendar, createEvent, requestCalendarPermissions]);
 
   const handleConfirm = useCallback(async () => {
     try {
       // Update on backend
       if (id && id !== "demo") {
-        await updateAction.mutateAsync({ id, data: { status: "active", priority } });
+        const updateData: Record<string, any> = { status: "active", priority };
+        if (shareWithHousehold && activeHouseholdId) {
+          updateData.household_id = activeHouseholdId;
+          if (assigneeId) {
+            updateData.assignee_id = assigneeId;
+          }
+        }
+        await updateAction.mutateAsync({ id, data: updateData });
       }
 
-      // Schedule notification reminder
+      // Schedule notification reminder — show explainer first if needed
       if (action?.due_date) {
-        const hasNotifPermission = await requestNotifPermissions();
-        if (hasNotifPermission) {
-          await scheduleReminder({
-            title: `Reminder: ${action.title}`,
-            body: action.description || "",
-            date: new Date(new Date(action.due_date).getTime() - 15 * 60 * 1000), // 15 min before
-            actionId: id,
-          });
+        if (notifExplainerSeen) {
+          const reminderDate = new Date(new Date(action.due_date).getTime() - 15 * 60 * 1000);
+          if (reminderDate > new Date()) {
+            const hasNotifPermission = await requestNotifPermissions();
+            if (hasNotifPermission) {
+              try {
+                await scheduleReminder({
+                  title: `Reminder: ${action.title || "Untitled"}`,
+                  body: action.description || "Tap to view details",
+                  date: reminderDate,
+                  actionId: id,
+                });
+              } catch (notifErr: any) {
+                console.warn("Failed to schedule notification:", notifErr);
+              }
+            }
+          }
+        } else {
+          // First time — show explainer
+          setPendingNotifFlow(true);
+          setShowNotifExplainer(true);
+          return; // handleExplainerDone will continue the flow
         }
       }
 
@@ -59,13 +187,17 @@ export default function ActionDetailScreen() {
       if (addToCalendar) {
         const hasCalPermission = await requestCalendarPermissions();
         if (hasCalPermission && action?.due_date) {
-          await createEvent({
-            title: action.title,
-            notes: action.description,
-            startDate: new Date(action.due_date),
-            location: action.location || undefined,
-            alarms: [{ relativeOffset: -15 }],
-          });
+          try {
+            await createEvent({
+              title: action.title || "Untitled Event",
+              notes: action.description || undefined,
+              startDate: new Date(action.due_date),
+              location: action.location || undefined,
+              alarms: [{ relativeOffset: -15 }],
+            });
+          } catch (calErr: any) {
+            console.warn("Failed to create calendar event:", calErr);
+          }
         }
       }
 
@@ -73,7 +205,7 @@ export default function ActionDetailScreen() {
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to save action");
     }
-  }, [action, id, priority, addToCalendar, updateAction, scheduleReminder, requestNotifPermissions, createEvent, requestCalendarPermissions]);
+  }, [action, id, priority, addToCalendar, updateAction, scheduleReminder, requestNotifPermissions, createEvent, requestCalendarPermissions, notifExplainerSeen, shareWithHousehold, activeHouseholdId, assigneeId]);
 
   if (isLoading) {
     return (
@@ -83,19 +215,36 @@ export default function ActionDetailScreen() {
     );
   }
 
-  const actionTitle = action?.title || "Dentist Appointment";
-  const actionDetail = action?.description || "123 Main St, Suite 200 · Dr. Smith";
-  const actionDate = action?.due_date ? new Date(action.due_date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "April 12, 2026";
-  const actionTime = action?.due_date ? new Date(action.due_date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "3:00 PM";
+  if (isError) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Could not load action</Text>
+          <Text style={styles.errorText}>
+            The server may be unavailable. Please check your connection and try again.
+          </Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
+            <Text style={styles.retryBtnText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const actionTitle = action?.title || "Untitled";
+  const actionDetail = action?.description || null;
+  const actionDate = action?.due_date ? new Date(action.due_date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "No date set";
+  const actionTime = action?.due_date ? new Date(action.due_date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : null;
 
   if (confirmed) {
     return (
       <View style={styles.confirmedContainer}>
-        <Text style={styles.confirmedIcon}>✅</Text>
-        <Text style={styles.confirmedTitle}>Action Created!</Text>
+        <Text style={styles.confirmedIcon}>✨</Text>
+        <Text style={styles.confirmedTitle}>Done. It's out of your head now.</Text>
         <Text style={styles.confirmedText}>
           {addToCalendar ? "Added to your calendar. " : ""}
-          A reminder has been set.
+          Snap saved. I'll snap back when it's time.
         </Text>
         <Link href="/(tabs)" asChild>
           <TouchableOpacity style={styles.backHomeBtn}>
@@ -107,95 +256,165 @@ export default function ActionDetailScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <Link href="/(tabs)" asChild>
-          <TouchableOpacity><Text style={styles.backBtn}>← Back</Text></TouchableOpacity>
-        </Link>
-        <Text style={styles.headerTitle}>Review Action</Text>
-        <View style={{ width: 60 }} />
-      </View>
-
-      <View style={styles.confidenceBar}>
-        <Text style={styles.confidenceIcon}>🤖</Text>
-        <View style={styles.confidenceContent}>
-          <Text style={styles.confidenceText}>AI extracted this with high confidence</Text>
-          <View style={styles.confidenceTrack}>
-            <View style={[styles.confidenceFill, { width: "92%" }]} />
-          </View>
+    <View style={{ flex: 1 }}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Link href="/(tabs)" asChild>
+            <TouchableOpacity><Text style={styles.backBtn}>← Back</Text></TouchableOpacity>
+          </Link>
+          <Text style={styles.headerTitle}>Review Action</Text>
+          <View style={{ width: 60 }} />
         </View>
-        <Text style={styles.confidencePct}>92%</Text>
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{actionTitle}</Text>
-        <Text style={styles.cardDetail}>{actionDetail}</Text>
-        <View style={styles.divider} />
+        <View style={styles.confidenceBar}>
+          <Text style={styles.confidenceIcon}>🤖</Text>
+          <View style={styles.confidenceContent}>
+            <Text style={styles.confidenceText}>AI extracted this with high confidence</Text>
+            <View style={styles.confidenceTrack}>
+              <View style={[styles.confidenceFill, { width: `${Math.min(Math.max((action?.confidence_score ?? 0.92) * 100, 5), 100)}%` }]} />
+            </View>
+          </View>
+          <Text style={styles.confidencePct}>{Math.round(Math.min(Math.max((action?.confidence_score ?? 0.92) * 100, 5), 100))}%</Text>
+        </View>
 
-        <Text style={styles.sectionLabel}>Category</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-          {CATEGORIES.map((c) => (
-            <TouchableOpacity
-              key={c.key}
-              style={[styles.chip, category === c.key && { backgroundColor: c.color + "20", borderColor: c.color }]}
-              onPress={() => setCategory(c.key)}
-            >
-              <Text style={styles.chipIcon}>{c.icon}</Text>
-              <Text style={[styles.chipLabel, category === c.key && { color: c.color }]}>{c.label}</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{actionTitle}</Text>
+          {actionDetail && <Text style={styles.cardDetail}>{actionDetail}</Text>}
+          <View style={styles.divider} />
+
+          <Text style={styles.sectionLabel}>Category</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+            {CATEGORIES.map((c) => (
+              <TouchableOpacity
+                key={c.key}
+                style={[styles.chip, category === c.key && { backgroundColor: c.color + "20", borderColor: c.color }]}
+                onPress={() => setCategory(c.key)}
+              >
+                <Text style={styles.chipIcon}>{c.icon}</Text>
+                <Text style={[styles.chipLabel, category === c.key && { color: c.color }]}>{c.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>Date</Text>
+            <TouchableOpacity style={styles.fieldValue}>
+              <Text style={styles.fieldValueText}>{actionDate}</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+          </View>
+          {actionTime && (
+            <View style={styles.fieldRow}>
+              <Text style={styles.fieldLabel}>Time</Text>
+              <TouchableOpacity style={styles.fieldValue}>
+                <Text style={styles.fieldValueText}>{actionTime}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-        <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>Date</Text>
-          <TouchableOpacity style={styles.fieldValue}>
-            <Text style={styles.fieldValueText}>{actionDate}</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>Time</Text>
-          <TouchableOpacity style={styles.fieldValue}>
-            <Text style={styles.fieldValueText}>{actionTime}</Text>
-          </TouchableOpacity>
+          {/* Scheduling prompt for dateless actions */}
+          {!action?.due_date && action?.scheduling_suggestions && action.scheduling_suggestions.length > 0 && (
+            <View style={styles.scheduleSection}>
+              <View style={styles.divider} />
+              <Text style={styles.sectionLabel}>When should we remind you?</Text>
+              <View style={styles.scheduleChips}>
+                {action.scheduling_suggestions.map((suggestion) => (
+                  <TouchableOpacity
+                    key={suggestion}
+                    style={styles.scheduleChip}
+                    onPress={() => handleScheduleSuggestion(suggestion)}
+                  >
+                    <Text style={styles.scheduleChipText}>{suggestion}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity style={styles.scheduleChipPick}>
+                  <Text style={styles.scheduleChipText}>Pick a date</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.scheduleDismiss} onPress={() => scheduleDismiss()}>
+                <Text style={styles.scheduleDismissText}>Not now</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <Text style={styles.sectionLabel}>Priority</Text>
+          <View style={styles.priorityRow}>
+            {PRIORITIES.map((p) => (
+              <TouchableOpacity
+                key={p.key}
+                style={[styles.priorityChip, priority === p.key && { backgroundColor: p.color + "20", borderColor: p.color }]}
+                onPress={() => setPriority(p.key)}
+              >
+                <Text style={[styles.priorityText, priority === p.key && { color: p.color, fontWeight: "700" }]}>{p.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Text style={styles.toggleIcon}>📅</Text>
+              <Text style={styles.toggleLabel}>Add to calendar</Text>
+            </View>
+            <Switch value={addToCalendar} onValueChange={setAddToCalendar} trackColor={{ false: colors.border, true: colors.brand.primary + "80" }} thumbColor={addToCalendar ? colors.brand.primary : "#f4f3f4"} />
+          </View>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Text style={styles.toggleIcon}>🏠</Text>
+              <Text style={styles.toggleLabel}>Share with household</Text>
+            </View>
+            <Switch value={shareWithHousehold} onValueChange={setShareWithHousehold} trackColor={{ false: colors.border, true: colors.accent.complete + "80" }} thumbColor={shareWithHousehold ? colors.accent.complete : "#f4f3f4"} />
+          </View>
+          {shareWithHousehold && householdMembers.length > 1 && (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.sectionLabel}>Assign to</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+                <TouchableOpacity
+                  style={[styles.chip, !assigneeId && { backgroundColor: colors.brand.primary + "20", borderColor: colors.brand.primary }]}
+                  onPress={() => setAssigneeId(null)}
+                >
+                  <Text style={[styles.chipLabel, !assigneeId && { color: colors.brand.primary }]}>Anyone</Text>
+                </TouchableOpacity>
+                {householdMembers.map((m) => (
+                  <TouchableOpacity
+                    key={m.user_id}
+                    style={[styles.chip, assigneeId === m.user_id && { backgroundColor: colors.brand.primary + "20", borderColor: colors.brand.primary }]}
+                    onPress={() => setAssigneeId(m.user_id === assigneeId ? null : m.user_id)}
+                  >
+                    <Text style={[styles.chipLabel, assigneeId === m.user_id && { color: colors.brand.primary }]}>
+                      {m.display_name} {m.user_id === currentUser?.id ? "(Me)" : ""}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          )}
         </View>
 
-        <Text style={styles.sectionLabel}>Priority</Text>
-        <View style={styles.priorityRow}>
-          {PRIORITIES.map((p) => (
-            <TouchableOpacity
-              key={p.key}
-              style={[styles.priorityChip, priority === p.key && { backgroundColor: p.color + "20", borderColor: p.color }]}
-              onPress={() => setPriority(p.key)}
-            >
-              <Text style={[styles.priorityText, priority === p.key && { color: p.color, fontWeight: "700" }]}>{p.label}</Text>
+        <View style={styles.actions}>
+          <Button title="✓ Confirm & Save" onPress={handleConfirm} variant="primary" size="lg" fullWidth loading={updateAction.isPending} />
+          <Button title="✏️ Edit Details" onPress={() => {}} variant="secondary" size="md" fullWidth />
+          <Button title="Dismiss" onPress={() => router.replace("/(tabs)")} variant="ghost" size="md" fullWidth />
+        </View>
+      </ScrollView>
+
+      {/* Notification explainer modal — shown once before first permission request */}
+      <Modal visible={showNotifExplainer} transparent animationType="fade" onRequestClose={() => setShowNotifExplainer(false)}>
+        <View style={styles.explainerOverlay}>
+          <View style={styles.explainerCard}>
+            <Text style={styles.explainerIcon}>🔔</Text>
+            <Text style={styles.explainerTitle}>One quick thing...</Text>
+            <Text style={styles.explainerText}>
+              SnapDone needs permission to send you notifications for your own reminders — like appointments, bills, and tasks you've captured. We never send spam or promotional notifications.
+            </Text>
+            <TouchableOpacity style={styles.explainerBtn} onPress={handleExplainerDone}>
+              <Text style={styles.explainerBtnText}>Got it</Text>
             </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleLeft}>
-            <Text style={styles.toggleIcon}>📅</Text>
-            <Text style={styles.toggleLabel}>Add to calendar</Text>
           </View>
-          <Switch value={addToCalendar} onValueChange={setAddToCalendar} trackColor={{ false: colors.border, true: colors.brand.primary + "80" }} thumbColor={addToCalendar ? colors.brand.primary : "#f4f3f4"} />
         </View>
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleLeft}>
-            <Text style={styles.toggleIcon}>🏠</Text>
-            <Text style={styles.toggleLabel}>Share with household</Text>
-          </View>
-          <Switch value={shareWithHousehold} onValueChange={setShareWithHousehold} trackColor={{ false: colors.border, true: colors.accent.complete + "80" }} thumbColor={shareWithHousehold ? colors.accent.complete : "#f4f3f4"} />
-        </View>
-      </View>
-
-      <View style={styles.actions}>
-        <Button title="✓ Confirm & Save" onPress={handleConfirm} variant="primary" size="lg" fullWidth loading={updateAction.isPending} />
-        <Button title="✏️ Edit Details" onPress={() => {}} variant="secondary" size="md" fullWidth />
-        <Button title="Dismiss" onPress={() => router.replace("/(tabs)")} variant="ghost" size="md" fullWidth />
-      </View>
-    </ScrollView>
+      </Modal>
+    </View>
   );
 }
 
@@ -238,4 +457,31 @@ const styles = StyleSheet.create({
   confirmedText: { fontSize: 16, color: colors.text.muted, textAlign: "center", lineHeight: 22, marginBottom: 32 },
   backHomeBtn: { backgroundColor: colors.brand.primary, paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12 },
   backHomeText: { color: colors.white, fontSize: 17, fontWeight: "700" },
+
+  // Notification explainer modal
+  explainerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 32 },
+  explainerCard: { backgroundColor: colors.white, borderRadius: 20, padding: 32, alignItems: "center", maxWidth: 340, width: "100%" },
+  explainerIcon: { fontSize: 40, marginBottom: 12 },
+  explainerTitle: { fontSize: 20, fontWeight: "800", color: colors.deep, marginBottom: 12, textAlign: "center" },
+  explainerText: { fontSize: 15, color: colors.text.muted, textAlign: "center", lineHeight: 22, marginBottom: 24 },
+  explainerBtn: { backgroundColor: colors.brand.primary, paddingVertical: 14, paddingHorizontal: 40, borderRadius: 12 },
+  explainerBtnText: { color: colors.white, fontSize: 17, fontWeight: "700" },
+
+  // Error state
+  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32 },
+  errorIcon: { fontSize: 48, marginBottom: 16 },
+  errorTitle: { fontSize: 20, fontWeight: "700", color: colors.deep, marginBottom: 8, textAlign: "center" },
+  errorText: { fontSize: 15, color: colors.text.muted, textAlign: "center", lineHeight: 22, marginBottom: 24 },
+  retryBtn: { backgroundColor: colors.brand.primary, paddingVertical: 12, paddingHorizontal: 32, borderRadius: 12 },
+  retryBtnText: { color: colors.white, fontSize: 16, fontWeight: "600" },
+
+  /* Scheduling prompt */
+  scheduleSection: { marginBottom: 12 },
+  scheduleChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+  scheduleChip: { backgroundColor: colors.brand.light, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: colors.brand.primary },
+  scheduleChipPick: { backgroundColor: colors.white, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: colors.border, borderStyle: "dashed" },
+  scheduleChipText: { fontSize: 14, fontWeight: "600", color: colors.brand.dark },
+  scheduleDismiss: { alignItems: "center", paddingVertical: 8 },
+  scheduleDismissText: { fontSize: 14, color: colors.text.muted, fontWeight: "500" },
+
 });
