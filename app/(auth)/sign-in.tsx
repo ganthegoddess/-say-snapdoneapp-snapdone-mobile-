@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { Link, router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { signin } from "../../src/services/auth";
 import { useAuthStore } from "../../src/stores/authStore";
 
 export default function SignInScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const isSubmitting = useAuthStore((state) => state.isSubmitting);
   const error = useAuthStore((state) => state.error);
@@ -56,18 +58,31 @@ export default function SignInScreen() {
         />
 
         <Text style={styles.label}>Password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your password"
-          placeholderTextColor="#94A3B8"
-          secureTextEntry
-          autoComplete="password"
-          value={password}
-          onChangeText={(text) => {
-            setPassword(text);
-            if (error) setError(null);
-          }}
-        />
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Enter your password"
+            placeholderTextColor="#94A3B8"
+            secureTextEntry={!showPassword}
+            autoComplete="password"
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (error) setError(null);
+            }}
+          />
+          <TouchableOpacity
+            style={styles.eyeButton}
+            onPress={() => setShowPassword(!showPassword)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={22}
+              color="#94A3B8"
+            />
+          </TouchableOpacity>
+        </View>
 
         {error && (
           <View style={styles.errorContainer}>
@@ -105,6 +120,9 @@ const styles = StyleSheet.create({
   form: { gap: 16 },
   label: { fontSize: 14, fontWeight: "600", color: "#1E293B" },
   input: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 1, borderColor: "#E2E8F0", color: "#1E293B" },
+  passwordContainer: { position: "relative", justifyContent: "center" },
+  passwordInput: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, paddingRight: 48, fontSize: 16, borderWidth: 1, borderColor: "#E2E8F0", color: "#1E293B" },
+  eyeButton: { position: "absolute", right: 14, padding: 4 },
   errorContainer: { backgroundColor: "#FEF2F2", borderRadius: 8, padding: 12, borderWidth: 1, borderColor: "#FECACA" },
   errorText: { color: "#EF4444", fontSize: 14, textAlign: "center" },
   signInButton: { backgroundColor: "#0891B2", paddingVertical: 16, borderRadius: 12, alignItems: "center", marginTop: 8 },
