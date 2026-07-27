@@ -39,6 +39,31 @@ export function useCapture() {
     }
   }, []);
 
+  /** Upload a voice recording */
+  const uploadVoice = useCallback(async (uri: string) => {
+    setIsUploading(true);
+    setError(null);
+    setDraft({ source: "camera", uri, inputType: "audio", status: "processing" });
+
+    try {
+      const result = await captureService.uploadCapture(uri, "audio", (progress) => {
+        setUploadProgress(progress);
+      });
+
+      if (result.capture_id) {
+        router.replace(`/processing/${result.capture_id}`);
+        startPolling(result.capture_id);
+      } else {
+        setError("Upload failed — no capture ID returned");
+        setIsUploading(false);
+      }
+    } catch (err: any) {
+      setError(err.message || "Upload failed");
+      setIsUploading(false);
+      setDraft({ status: "failed" });
+    }
+  }, []);
+
   /** Poll for processing result */
   const startPolling = useCallback(async (captureId: string) => {
     try {
@@ -94,6 +119,7 @@ export function useCapture() {
     error,
     isUploading,
     uploadPhoto,
+    uploadVoice,
     submitText,
     reset,
   };
