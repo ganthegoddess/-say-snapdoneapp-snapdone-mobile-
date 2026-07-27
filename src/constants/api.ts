@@ -50,6 +50,11 @@ export const SUBSCRIPTIONS = {
   CANCEL: `${API_PREFIX}/subscriptions/cancel`,
 } as const;
 
+// Push notifications
+export const PUSH = {
+  TOKEN: `${API_PREFIX}/push-token`,
+} as const;
+
 // Deep links
 export const DEEP_LINKS = {
   PAYMENT_SUCCESS: "snapdone://payment/success",

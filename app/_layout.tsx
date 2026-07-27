@@ -6,6 +6,7 @@ import * as Notifications from "expo-notifications";
 import { AppProviders } from "../src/providers/AppProviders";
 import { useAuthStore } from "../src/stores/authStore";
 import { ShareExtensionHandler } from "../src/components/capture/ShareExtensionHandler";
+import { PushTokenRegistrar } from "../src/components/notifications/PushTokenRegistrar";
 
 // Configure notification presentation
 Notifications.setNotificationHandler({
@@ -94,6 +95,9 @@ export default function RootLayout() {
 
         {/* Share extension handler overlay */}
         <ShareExtensionHandler />
+
+        {/* Push token registration */}
+        <PushTokenRegistrar />
       </AppProviders>
     </GestureHandlerRootView>
   );
