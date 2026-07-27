@@ -24,7 +24,7 @@ export default function IndexScreen() {
   }
 
   if (!token) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href="/(auth)/sign-in" />;
   }
 
   // Authenticated — go to tabs

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { FULL_API_URL } from "../constants/api";
 
 // In-memory storage fallback (for environments where SecureStore is unavailable)
 const memoryStore = new Map<string, string>();
@@ -91,6 +92,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const token = await storage.getItemAsync(AUTH_TOKEN_KEY);
       const userJson = await storage.getItemAsync(USER_KEY);
       const user = userJson ? JSON.parse(userJson) : null;
+
+      // Validate token if present — call a lightweight protected endpoint
+      if (token) {
+        try {
+          const resp = await fetch(`${FULL_API_URL}/api/v1/actions?limit=1`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!resp.ok && resp.status === 401) {
+            // Token expired or invalid — clear it
+            await storage.deleteItemAsync(AUTH_TOKEN_KEY);
+            await storage.deleteItemAsync(USER_KEY);
+            set({ token: null, user: null, isLoading: false });
+            return;
+          }
+        } catch {
+          // Network error — keep token, let user try offline or retry
+        }
+      }
+
       set({ token, user, isLoading: false });
     } catch {
       set({ token: null, user: null, isLoading: false });

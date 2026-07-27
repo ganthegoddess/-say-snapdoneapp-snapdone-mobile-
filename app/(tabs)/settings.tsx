@@ -1,6 +1,7 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { router } from "expo-router";
 import { colors } from "../../src/constants/colors";
+import { useAuthStore } from "../../src/stores/authStore";
 
 interface SettingsItem {
   icon: string;
@@ -40,6 +41,26 @@ const SETTINGS_SECTIONS: { title: string; items: SettingsItem[] }[] = [
 ];
 
 export default function SettingsScreen() {
+  const signOut = useAuthStore((state) => state.signOut);
+
+  const handleSignOut = () => {
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: async () => {
+            await signOut();
+            router.replace("/(auth)/sign-in");
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Settings</Text>
@@ -101,6 +122,13 @@ export default function SettingsScreen() {
       </View>
 
       <View style={{ height: 40 }} />
+
+      {/* Sign Out */}
+      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+        <Text style={styles.signOutText}>Sign Out</Text>
+      </TouchableOpacity>
+
+      <View style={{ height: 60 }} />
     </ScrollView>
   );
 }
@@ -133,4 +161,16 @@ const styles = StyleSheet.create({
   upgradeTitle: { fontSize: 17, fontWeight: "700", color: colors.brand.dark },
   upgradeText: { fontSize: 13, color: colors.brand.dark, marginTop: 2 },
   upgradeChevron: { fontSize: 22, color: colors.brand.primary, fontWeight: "600" },
+
+  // Sign out
+  signOutButton: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    marginHorizontal: 0,
+  },
+  signOutText: { fontSize: 16, fontWeight: "600", color: "#EF4444" },
 });
