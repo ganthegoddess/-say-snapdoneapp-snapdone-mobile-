@@ -15,6 +15,9 @@ export interface ActionItem {
   household_id?: string;
   assignee_id?: string;
   scheduling_suggestions?: string[];
+  is_sensitive?: boolean;
+  blurred_thumbnail_url?: string;
+  thumbnail_url?: string;
   created_at: string;
   updated_at: string;
 }

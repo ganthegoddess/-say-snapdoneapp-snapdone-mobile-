@@ -12,6 +12,7 @@ import { useCalendar } from "../../src/hooks/useCalendar";
 import { Skeleton } from "../../src/components/ui/Skeleton";
 import { useHouseholds, useHousehold, useAcknowledgeAction } from "../../src/hooks/useHouseholds";
 import { useAuthStore } from "../../src/stores/authStore";
+import { useBiometricAuth } from "../../src/hooks/useBiometricAuth";
 
 const NOTIF_EXPLAINER_KEY = "@snapdone/notif_explainer_seen";
 
@@ -71,6 +72,7 @@ export default function ActionDetailScreen() {
   const acknowledgeAction = useAcknowledgeAction();
   const currentUser = useAuthStore((s) => s.user);
   const householdMembers = householdDetails?.members || [];
+  const { isAuthenticated, isChecking, authenticate } = useBiometricAuth();
 
   const [confirmed, setConfirmed] = useState(false);
   const [category, setCategory] = useState<string>(action?.action_type || "event");
@@ -278,6 +280,20 @@ export default function ActionDetailScreen() {
         </View>
 
         <View style={styles.card}>
+          {action?.is_sensitive && !isAuthenticated && (
+            <TouchableOpacity
+              style={styles.sensitiveOverlay}
+              onPress={() => authenticate()}
+              disabled={isChecking}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.sensitiveOverlayIcon}>🔒</Text>
+              <Text style={styles.sensitiveOverlayTitle}>Sensitive Content</Text>
+              <Text style={styles.sensitiveOverlayText}>
+                {isChecking ? "Authenticating..." : "Tap to unlock with Face ID / Touch ID"}
+              </Text>
+            </TouchableOpacity>
+          )}
           <Text style={styles.cardTitle}>{actionTitle}</Text>
           {actionDetail && <Text style={styles.cardDetail}>{actionDetail}</Text>}
           <View style={styles.divider} />
@@ -483,5 +499,11 @@ const styles = StyleSheet.create({
   scheduleChipText: { fontSize: 14, fontWeight: "600", color: colors.brand.dark },
   scheduleDismiss: { alignItems: "center", paddingVertical: 8 },
   scheduleDismissText: { fontSize: 14, color: colors.text.muted, fontWeight: "500" },
+
+  /* Sensitive content overlay */
+  sensitiveOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(255,255,255,0.92)", borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 10, padding: 24 },
+  sensitiveOverlayIcon: { fontSize: 40, marginBottom: 12 },
+  sensitiveOverlayTitle: { fontSize: 18, fontWeight: "700", color: colors.deep, marginBottom: 8, textAlign: "center" },
+  sensitiveOverlayText: { fontSize: 14, color: colors.text.muted, textAlign: "center", lineHeight: 20 },
 
 });

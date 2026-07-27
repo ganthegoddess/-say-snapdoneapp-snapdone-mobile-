@@ -134,6 +134,7 @@ export default function HomeScreen() {
                     detail={a.description}
                     date={formatDate(a.due_date)}
                     status={STATUS_MAP[a.status] || "pending"}
+                    isSensitive={a.is_sensitive}
                     onConfirm={() => handleConfirm(a.id)}
                     onEdit={() => router.push(`/action/${a.id}`)}
                     onDismiss={() => handleDismiss(a.id)}
@@ -152,6 +153,7 @@ export default function HomeScreen() {
                     detail={a.description}
                     date={formatDate(a.due_date)}
                     status={STATUS_MAP[a.status] || "pending"}
+                    isSensitive={a.is_sensitive}
                     onConfirm={() => handleConfirm(a.id)}
                     onEdit={() => router.push(`/action/${a.id}`)}
                     onDismiss={() => handleDismiss(a.id)}

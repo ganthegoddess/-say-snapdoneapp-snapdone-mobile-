@@ -13,6 +13,7 @@ interface ActionCardProps {
   amount?: string;
   status: ActionStatus;
   source?: CaptureSource;
+  isSensitive?: boolean;
   onConfirm?: () => void;
   onEdit?: () => void;
   onDismiss?: () => void;
@@ -26,14 +27,19 @@ const TYPE_CONFIG: Record<ActionType, { icon: string; color: string; label: stri
   task: { icon: "✅", color: colors.accent.complete, label: "Task" },
 };
 
-export function ActionCard({ type, title, detail, date, amount, status, source, onConfirm, onEdit, onDismiss }: ActionCardProps) {
+export function ActionCard({ type, title, detail, date, amount, status, source, isSensitive, onConfirm, onEdit, onDismiss }: ActionCardProps) {
   const config = TYPE_CONFIG[type];
   const isDone = status === "confirmed";
   const isDismissed = status === "dismissed";
   if (isDismissed) return null;
 
   return (
-    <View style={[styles.card, isDone && styles.cardDone]}>
+    <View style={[styles.card, isDone && styles.cardDone, isSensitive && styles.cardSensitive]}>
+      {isSensitive && (
+        <View style={styles.sensitiveBadge}>
+          <Text style={styles.sensitiveIcon}>🔒</Text>
+        </View>
+      )}
       <View style={styles.header}>
         <View style={styles.typeRow}>
           <Text style={styles.typeIcon}>{config.icon}</Text>
@@ -65,6 +71,9 @@ export function ActionCard({ type, title, detail, date, amount, status, source, 
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.white, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2, marginBottom: 10 },
   cardDone: { borderLeftWidth: 4, borderLeftColor: colors.accent.complete, opacity: 0.75 },
+  cardSensitive: { borderColor: "#FCD34D", borderWidth: 1.5 },
+  sensitiveBadge: { position: "absolute", top: 8, right: 8, backgroundColor: "rgba(251,191,36,0.2)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, zIndex: 1 },
+  sensitiveIcon: { fontSize: 12 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
   typeRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   typeIcon: { fontSize: 14 },
