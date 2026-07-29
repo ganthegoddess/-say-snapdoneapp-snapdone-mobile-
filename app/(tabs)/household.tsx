@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Share, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { colors } from "../../src/constants/colors";
 import { Button } from "../../src/components/ui/Button";
 import { useHouseholds, useCreateHousehold, useLeaveHousehold, useHousehold } from "../../src/hooks/useHouseholds";
 import { useAuthStore } from "../../src/stores/authStore";
+import { trackInviteEvent } from "../../src/services/analytics";
 
 export default function HouseholdScreen() {
   const user = useAuthStore((s) => s.user);
@@ -14,6 +15,8 @@ export default function HouseholdScreen() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [houseName, setHouseName] = useState("");
+  const inviteCountRef = useRef(0);
+  const [invitesSent, setInvitesSent] = useState(0);
 
   const activeHousehold = households?.[0];
   const { data: householdDetails } = useHousehold(activeHousehold?.id);
@@ -31,6 +34,15 @@ export default function HouseholdScreen() {
 
   const handleShareInvite = async () => {
     if (!activeHousehold?.invite_code) return;
+    const newCount = inviteCountRef.current + 1;
+    inviteCountRef.current = newCount;
+    setInvitesSent(newCount);
+    trackInviteEvent("invite_sent", {
+      source_screen: "household",
+      household_id: activeHousehold.id,
+      method: "share",
+      invites_sent: newCount,
+    });
     try {
       await Share.share({
         message: `Join my household on SnapDone! Use invite code: ${activeHousehold.invite_code}`,
@@ -86,9 +98,15 @@ export default function HouseholdScreen() {
               <Text style={styles.inviteText}>
                 Share grocery lists, chores, reminders, and events with up to 4 family members. One household per subscription.
               </Text>
-              <Button title="Create Household" onPress={() => setShowCreateForm(true)} variant="primary" size="lg" fullWidth />
+              <Button title="Create Household" onPress={() => {
+                trackInviteEvent("invite_tapped", { source_screen: "household", household_id: undefined });
+                setShowCreateForm(true);
+              }} variant="primary" size="lg" fullWidth />
               <View style={{ marginTop: 12 }}>
-                <Button title="Join a Household" onPress={() => router.push("/household/join")} variant="secondary" size="md" fullWidth />
+                <Button title="Join a Household" onPress={() => {
+                  trackInviteEvent("invite_tapped", { source_screen: "household", household_id: undefined });
+                  router.push("/household/join");
+                }} variant="secondary" size="md" fullWidth />
               </View>
             </View>
           ) : (
@@ -132,12 +150,29 @@ export default function HouseholdScreen() {
               {members.length < 4 && (
                 <View style={{ flex: 1 }}>
                   <Button title="Copy Code" onPress={() => {
+                    const newCount = inviteCountRef.current + 1;
+                    inviteCountRef.current = newCount;
+                    setInvitesSent(newCount);
+                    trackInviteEvent("invite_sent", {
+                      source_screen: "household",
+                      household_id: activeHousehold.id,
+                      method: "copy_code",
+                      invites_sent: newCount,
+                    });
                     Share.share({ message: activeHousehold.invite_code || "" });
                   }} variant="secondary" size="md" fullWidth />
                 </View>
               )}
             </View>
           </View>
+
+          {invitesSent > 0 && (
+            <View style={styles.inviteCounter}>
+              <Text style={styles.inviteCounterText}>
+                {invitesSent} invite{invitesSent !== 1 ? "s" : ""} sent this session
+              </Text>
+            </View>
+          )}
 
           <Text style={styles.sectionTitle}>Members</Text>
           {members.length === 0 ? (
@@ -196,6 +231,21 @@ const styles = StyleSheet.create({
   inviteText: { fontSize: 14, color: colors.brand.dark, textAlign: "center", marginBottom: 16, lineHeight: 20 },
   input: { width: "100%", backgroundColor: colors.white, borderRadius: 10, padding: 14, fontSize: 16, color: colors.deep, borderWidth: 1, borderColor: colors.border, marginBottom: 16 },
   cancelText: { fontSize: 15, color: colors.text.muted, fontWeight: "500" },
+
+  // Invite counter pill
+  inviteCounter: {
+    marginTop: 12,
+    backgroundColor: colors.brand.light,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: "center",
+    borderWidth: 1,
+    borderColor: colors.brand.primary + "30",
+    marginBottom: 8,
+  },
+  inviteCounterText: { fontSize: 13, color: colors.brand.dark, fontWeight: "600" },
+
   sectionTitle: { fontSize: 18, fontWeight: "700", color: colors.deep, marginBottom: 12 },
   emptyState: { backgroundColor: colors.white, borderRadius: 12, padding: 32, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderStyle: "dashed" },
   emptyText: { fontSize: 16, fontWeight: "600", color: colors.text.primary, marginBottom: 8 },

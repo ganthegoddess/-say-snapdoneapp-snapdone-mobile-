@@ -1,5 +1,6 @@
 import { get, post } from "./api";
 import { HOUSEHOLDS } from "../constants/api";
+import { trackInviteEvent } from "./analytics";
 
 export interface HouseholdSummary {
   id: string;
@@ -48,7 +49,10 @@ export async function createHousehold(name: string): Promise<CreateHouseholdResp
 
 /** Join a household via invite code */
 export async function joinHousehold(inviteCode: string): Promise<{ household_id: string; name: string; role: string }> {
-  return post<{ household_id: string; name: string; role: string }>(HOUSEHOLDS.JOIN, { invite_code: inviteCode });
+  const result = await post<{ household_id: string; name: string; role: string }>(HOUSEHOLDS.JOIN, { invite_code: inviteCode });
+  // Fire analytics (fire-and-forget)
+  trackInviteEvent("invite_joined", { invite_code: inviteCode, household_id: result.household_id });
+  return result;
 }
 
 /** Leave a household */

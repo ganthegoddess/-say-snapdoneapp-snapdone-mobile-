@@ -85,3 +85,8 @@ export const FREE_TIER = {
   MAX_CAPTURES_PER_MONTH: 30,
   MAX_ACTIVE_ACTIONS: 5,
 } as const;
+
+// Analytics endpoints
+export const ANALYTICS = {
+  INVITE_EVENT: `${API_PREFIX}/analytics/invite-event`,
+} as const;
