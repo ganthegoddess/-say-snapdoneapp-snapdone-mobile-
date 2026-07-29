@@ -76,8 +76,8 @@ function computeParticlePositions(
         break;
       }
       case "thinking": {
-        // Elliptical orbit — designer spec: not perfect circle
-        const orbitAngle = baseAngle + frame * Math.PI * 1.2;
+        // Elliptical orbit — 45s per revolution, almost hypnotic
+        const orbitAngle = baseAngle + frame * Math.PI * 2;
         const ellipseX = p.distance * 1.35;
         const ellipseY = p.distance * 0.9;
         dx = Math.cos(orbitAngle) * ellipseX;

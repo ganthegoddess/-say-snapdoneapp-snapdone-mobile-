@@ -13,7 +13,7 @@
  * Business plan constraints: revision 67 — restraint over gimmicks.
  */
 
-import React, { useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View, Text } from "react-native";
 import Svg, {
   Circle,
@@ -30,7 +30,6 @@ import Animated, {
   withSequence,
   withDelay,
   Easing,
-  runOnJS,
   type SharedValue,
 } from "react-native-reanimated";
 
@@ -51,37 +50,40 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 // ──────────────────────────────────────────────
-//  PIP Color Palette (from business plan rev 66)
+//  PIP Color Palette (white-background spec — designer rev 2026-07-29)
 // ──────────────────────────────────────────────
 
 const PIP_COLORS = {
-  primaryGlow: "#FFF5D8",   // Warm Ivory
-  innerCore:  "#FFD98A",    // Soft Gold
-  outerGlow:  "#B79CFF",    // Lavender
-  particles:  "#F9FAFF",    // Moonlight White
-  eyeFill:    "#FFF5D8",    // Eyes — slightly brighter
+  primaryGlow: "#FCC870",       // Soft warm glow (was #FFF5D8 for dark bgs)
+  innerCore:  "#E89820",        // Rich warm gold anchor
+  outerGlow:  "#BFA0F0",        // Richer lavender
+  particles:  "#E8C898",        // Warm beige
+  particlesCool: "#D0B8FF",     // Soft lavender (cool accent)
+  eyeFill:    "#FFE0B0",        // Bright warm tone for visibility
+  rim:        "rgba(160, 120, 60, 0.18)",  // Definition line — non-negotiable
+  cardGlow:   "#FDB963",        // Card reflection color
 } as const;
 
 // ──────────────────────────────────────────────
-//  Per-state orb sizes (designer spec section 4.3)
+//  Per-state orb sizes (designer spec section 4.3 — 15% smaller)
 // ──────────────────────────────────────────────
 
 const ORB_SIZES: Record<PipState, number> = {
-  idle:      28,
-  listening: 32,
-  thinking:  30,
-  searching: 30,
-  remembered:34,
-  success:   32,
+  idle:      24,
+  listening: 27,
+  thinking:  26,
+  searching: 26,
+  remembered:29,
+  success:   27,
 };
 
 const AURA_EXTENTS: Record<PipState, number> = {
-  idle:      36,
-  listening: 44,
-  thinking:  42,
-  searching: 40,
-  remembered:48,
-  success:   48,
+  idle:      31,
+  listening: 37,
+  thinking:  36,
+  searching: 34,
+  remembered:41,
+  success:   41,
 };
 
 const PARTICLE_COUNTS: Record<PipState, number> = {
@@ -120,10 +122,10 @@ interface ParticleDef {
 
 function makeParticles(count: number, orbRadius: number): ParticleDef[] {
   const colors = [
+    PIP_COLORS.particles,      // warm beige
+    PIP_COLORS.particlesCool,  // soft lavender
     PIP_COLORS.primaryGlow,
     PIP_COLORS.innerCore,
-    PIP_COLORS.outerGlow,
-    PIP_COLORS.particles,
   ];
   return Array.from({ length: count }, (_, i) => ({
     id: i,
@@ -144,7 +146,7 @@ export interface PipWispProps {
   state?: PipState;
   /** Where PIP should be positioned on screen */
   position?: PipPosition;
-  /** Container size in dp (touch target, default: 44) */
+  /** Container size in dp (touch target, default: 38) */
   size?: number;
   /** Show the caption under PIP (uses relationship stage for text) */
   showCaption?: boolean;
@@ -167,13 +169,12 @@ export interface PipWispProps {
 export const PipWisp: React.FC<PipWispProps> = ({
   state = "idle",
   position = "top-right",
-  size = 44,
+  size = 38,
   showCaption = false,
   relationshipStage = "new",
   onCaught,
   visible = true,
   zIndex = 100,
-  background = "dark",
 }) => {
   const v = usePipAnimationValues();
   const { orbContainerStyle } = usePipStyles(v);
@@ -194,6 +195,22 @@ export const PipWisp: React.FC<PipWispProps> = ({
   const leftEyeSquint = useSharedValue(1);
   const rightEyeSquint = useSharedValue(1);
   const eyeScanX = useSharedValue(0);
+
+  // ── Particle frame for thinking-state orbit (45s per revolution) ──
+  const [particleFrame, setParticleFrame] = useState(0);
+
+  useEffect(() => {
+    if (state !== "thinking") {
+      setParticleFrame(0);
+      return;
+    }
+    const ORBIT_MS = 45000;
+    const TICK_MS = 200;
+    const interval = setInterval(() => {
+      setParticleFrame((prev) => (prev + TICK_MS / ORBIT_MS) % 1);
+    }, TICK_MS);
+    return () => clearInterval(interval);
+  }, [state]);
 
   // Stable callback ref (prevents useEffect churn)
   const onCaughtRef = useRef(onCaught);
@@ -229,8 +246,6 @@ export const PipWisp: React.FC<PipWispProps> = ({
     core: `c-${Math.random().toString(36).slice(2, 8)}`,
   }), []);
 
-  const isLight = background === "light";
-  const rimOpacity = isLight ? 0.1 : 0;
   const captionText = CAPTION_BY_STAGE[relationshipStage];
 
   if (!visible) return null;
@@ -308,21 +323,19 @@ export const PipWisp: React.FC<PipWispProps> = ({
           }))}
         />
 
-        {/* Dark rim for light backgrounds */}
-        {isLight && (
-          <AnimatedCircle
-            cx={size / 2}
-            cy={size / 2}
-            r={orbR + 1}
-            fill="none"
-            stroke="#1E1B4B"
-            strokeWidth={0.8}
-            animatedProps={useAnimatedProps(() => ({
-              opacity: rimOpacity * v.orbOpacity.value,
-              r: (orbR + 1) * v.orbScale.value,
-            }))}
-          />
-        )}
+        {/* Rim definition line — non-negotiable for visibility on white */}
+        <AnimatedCircle
+          cx={size / 2}
+          cy={size / 2}
+          r={orbR + 1}
+          fill="none"
+          stroke={PIP_COLORS.rim}
+          strokeWidth={0.8}
+          animatedProps={useAnimatedProps(() => ({
+            opacity: v.orbOpacity.value,
+            r: (orbR + 1) * v.orbScale.value,
+          }))}
+        />
 
         {/* Eyes — all animated props in useAnimatedProps (incl. cx for scan) */}
         <AnimatedG
@@ -354,17 +367,7 @@ export const PipWisp: React.FC<PipWispProps> = ({
           />
         </AnimatedG>
 
-        {/* Mouth — only remembered/success */}
-        <AnimatedPath
-          d={`M ${size / 2 - orbR * 0.16} ${size / 2 + orbR * 0.28} Q ${size / 2} ${size / 2 + orbR * 0.48} ${size / 2 + orbR * 0.16} ${size / 2 + orbR * 0.28}`}
-          stroke={PIP_COLORS.innerCore}
-          strokeWidth={0.7}
-          fill="none"
-          strokeLinecap="round"
-          animatedProps={useAnimatedProps(() => ({
-            opacity: (state === "remembered" || state === "success") ? 0.5 : 0,
-          }))}
-        />
+        {/* Mouth removed — eyes alone are stronger and more iconic (creative review) */}
 
         {/* Tail */}
         <AnimatedPath
@@ -376,7 +379,7 @@ export const PipWisp: React.FC<PipWispProps> = ({
             Q ${size / 2} ${size / 2 + orbR * 0.7 + orbR * 1.3} ${size / 2 + orbR * 0.35} ${size / 2 + orbR * 0.65}
             Z
           `}
-          fill={PIP_COLORS.innerCore}
+          fill={PIP_COLORS.primaryGlow}
           animatedProps={useAnimatedProps(() => ({
             opacity: v.tailOpacity.value * 0.45,
           }))}
@@ -393,6 +396,7 @@ export const PipWisp: React.FC<PipWispProps> = ({
             particles={particles}
             rotationDeg={0}
             state={state}
+            frame={particleFrame}
           />
         </AnimatedG>
 
@@ -485,14 +489,14 @@ function animateEyes(
 export const PipGlow: React.FC<{
   intensity?: number;
   radius?: number;
-}> = ({ intensity = 0.5, radius = 120 }) => {
+}> = ({ intensity = 0.5, radius = 100 }) => {
   return (
     <View
       style={[
         StyleSheet.absoluteFill,
         {
           borderRadius: 12,
-          shadowColor: PIP_COLORS.primaryGlow,
+          shadowColor: PIP_COLORS.cardGlow,
           shadowOffset: { width: -radius * 0.05, height: -radius * 0.1 },
           shadowOpacity: intensity * 0.08,
           shadowRadius: radius,
