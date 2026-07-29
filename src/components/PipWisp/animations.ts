@@ -66,7 +66,7 @@ interface StateConfig {
 const STATE_CONFIGS: Record<PipState, StateConfig> = {
   idle: {
     orbScale: 1.0,
-    opacity: 0.7,
+    opacity: 0.85,           // was 0.70 — too faint on white backgrounds
     glowIntensity: 0.35,
     floatAmplitude: 4,
     floatPeriod: 3000,
