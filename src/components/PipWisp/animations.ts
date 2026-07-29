@@ -66,7 +66,7 @@ interface StateConfig {
 const STATE_CONFIGS: Record<PipState, StateConfig> = {
   idle: {
     orbScale: 1.0,
-    opacity: 0.7,
+    opacity: 0.85,           // was 0.70 — too faint on white backgrounds
     glowIntensity: 0.35,
     floatAmplitude: 4,
     floatPeriod: 3000,
@@ -79,7 +79,7 @@ const STATE_CONFIGS: Record<PipState, StateConfig> = {
     transitionOutMs: 600,
   },
   listening: {
-    orbScale: 32 / 28,       // 32pt / 28pt = ~1.14
+    orbScale: 27 / 24,       // 27pt / 24pt = ~1.13
     opacity: 0.9,
     glowIntensity: 0.55,
     floatAmplitude: 2,
@@ -93,7 +93,7 @@ const STATE_CONFIGS: Record<PipState, StateConfig> = {
     transitionOutMs: 600,
   },
   thinking: {
-    orbScale: 30 / 28,       // 30pt / 28pt = ~1.07
+    orbScale: 26 / 24,       // 26pt / 24pt = ~1.08
     opacity: 0.8,
     glowIntensity: 0.4,
     floatAmplitude: 3,
@@ -107,7 +107,7 @@ const STATE_CONFIGS: Record<PipState, StateConfig> = {
     transitionOutMs: 400,
   },
   searching: {
-    orbScale: 30 / 28,
+    orbScale: 26 / 24,
     opacity: 0.8,
     glowIntensity: 0.38,
     floatAmplitude: 3,
@@ -121,7 +121,7 @@ const STATE_CONFIGS: Record<PipState, StateConfig> = {
     transitionOutMs: 400,
   },
   remembered: {
-    orbScale: 34 / 28,       // 34pt / 28pt = ~1.21
+    orbScale: 29 / 24,       // 29pt / 24pt = ~1.21
     opacity: 1.0,
     glowIntensity: 0.7,
     floatAmplitude: 2,
@@ -135,7 +135,7 @@ const STATE_CONFIGS: Record<PipState, StateConfig> = {
     transitionOutMs: 800,
   },
   success: {
-    orbScale: 32 / 28,       // 32pt → 28pt return
+    orbScale: 27 / 24,       // 27pt → 24pt return
     opacity: 1.0,
     glowIntensity: 0.7,
     floatAmplitude: 3,
@@ -377,7 +377,7 @@ export function playSignatureAnimation(
   );
 
   v.orbScale.value = withSequence(
-    withTiming(32 / 28, { duration: 250, easing: Easing.out(Easing.sin) }),
+    withTiming(27 / 24, { duration: 250, easing: Easing.out(Easing.sin) }),
     withTiming(config.orbScale, { duration: 200, easing: Easing.out(Easing.sin) }),
   );
 
