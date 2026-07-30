@@ -134,3 +134,51 @@ export interface ShareExtensionPayload {
   text?: string;
   subject?: string;
 }
+
+// ============================================================
+// Memory Payload — SnapBack card data shape
+// ============================================================
+
+/** Original capture types the backend can return */
+export type OriginalInputType = "image" | "voice" | "text" | "email" | "pdf";
+
+/** Contextual reason PIP surfaced this memory */
+export type RecallReason = "temporal" | "location" | "seasonal" | "search" | "serendipitous";
+
+/** The original capture — immutable, returned as the hero of every SnapBack */
+export interface OriginalCapture {
+  file_url: string;
+  input_type: OriginalInputType;
+  extracted_text?: string;
+  captured_at: string;
+  /** Optional filename for PDFs / emails */
+  filename?: string;
+  /** Optional duration (seconds) for voice notes */
+  duration_seconds?: number;
+}
+
+/** Context explaining why PIP surfaced this memory */
+export interface MemoryContext {
+  reason: RecallReason;
+  label: string;
+}
+
+/** PIP's companion message */
+export interface PipMessage {
+  message: string;
+}
+
+/** Full Memory Payload returned by the backend recall engine */
+export interface MemoryPayload {
+  action: {
+    id: string;
+    title: string;
+    description?: string;
+    action_type: string;
+    due_date?: string;
+    status?: string;
+  };
+  original: OriginalCapture;
+  context: MemoryContext;
+  pip: PipMessage;
+}

@@ -31,6 +31,7 @@ export const ACTIONS = {
   COMPLETE: (id: string) => `${API_PREFIX}/actions/${id}/complete`,
   ACKNOWLEDGE: (id: string) => `${API_PREFIX}/actions/${id}/acknowledge`,
   SCHEDULE: (id: string) => `${API_PREFIX}/actions/${id}/schedule`,
+  MEMORY_STATE: (id: string) => `${API_PREFIX}/actions/${id}/memory-state`,
 } as const;
 
 // Household endpoints
@@ -84,4 +85,15 @@ export const UPLOAD_LIMITS = {
 export const FREE_TIER = {
   MAX_CAPTURES_PER_MONTH: 30,
   MAX_ACTIVE_ACTIONS: 5,
+} as const;
+
+// Memory / recall endpoints
+export const MEMORIES = {
+  RECALL: `${API_PREFIX}/memories/recall`,
+} as const;
+
+// Analytics endpoints
+export const ANALYTICS = {
+  EVENT: `${API_PREFIX}/analytics/event`,
+  INVITE_EVENT: `${API_PREFIX}/analytics/invite-event`,
 } as const;
