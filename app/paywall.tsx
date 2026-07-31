@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
 import { router } from "expo-router";
 import { useCreateCheckout } from "../src/hooks/useSubscription";
+import { trackEvent } from "../src/lib/posthog";
 
 export default function PaywallScreen() {
   const checkout = useCreateCheckout();
@@ -8,6 +9,7 @@ export default function PaywallScreen() {
   const handleSubscribe = async (planType: "monthly" | "annual" | "household") => {
     try {
       const result = await checkout.mutateAsync(planType);
+      trackEvent("subscription_started", { to_tier: planType === "household" ? "household" : "premium" });
       if (result.checkout_url) {
         await Linking.openURL(result.checkout_url);
       }

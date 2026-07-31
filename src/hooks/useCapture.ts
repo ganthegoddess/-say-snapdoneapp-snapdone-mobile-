@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useCaptureStore } from "../stores/captureStore";
 import * as captureService from "../services/capture";
 import { router } from "expo-router";
+import { trackEvent } from "../lib/posthog";
 
 export function useCapture() {
   const draft = useCaptureStore((state) => state.draft);
@@ -25,32 +26,9 @@ export function useCapture() {
       });
 
       if (result.capture_id) {
+        // Track capture event
+        trackEvent("memory_captured", { capture_type: "photo" });
         // Start polling for result
-        router.replace(`/processing/${result.capture_id}`);
-        startPolling(result.capture_id);
-      } else {
-        setError("Upload failed — no capture ID returned");
-        setIsUploading(false);
-      }
-    } catch (err: any) {
-      setError(err.message || "Upload failed");
-      setIsUploading(false);
-      setDraft({ status: "failed" });
-    }
-  }, []);
-
-  /** Upload a voice recording */
-  const uploadVoice = useCallback(async (uri: string) => {
-    setIsUploading(true);
-    setError(null);
-    setDraft({ source: "camera", uri, inputType: "audio", status: "processing" });
-
-    try {
-      const result = await captureService.uploadCapture(uri, "audio", (progress) => {
-        setUploadProgress(progress);
-      });
-
-      if (result.capture_id) {
         router.replace(`/processing/${result.capture_id}`);
         startPolling(result.capture_id);
       } else {
@@ -74,8 +52,13 @@ export function useCapture() {
       setIsUploading(false);
 
       if (result.status === "completed" && result.action) {
-        // Brief pause so the processing screen can show the relief message
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Persist auto-assigned household member if present
+        if (result.action.assignee_id) {
+          setDraft({
+            assigneeId: result.action.assignee_id,
+            assigneeDisplayName: result.action.assignee_display_name,
+          });
+        }
         router.replace(`/action/${result.action.id}`);
       } else if (result.status === "failed") {
         setError(result.error_message || "Processing failed");
@@ -97,6 +80,7 @@ export function useCapture() {
     try {
       const result = await captureService.submitText(text);
       if (result.capture_id) {
+        trackEvent("memory_captured", { capture_type: "text" });
         router.replace(`/processing/${result.capture_id}`);
         startPolling(result.capture_id);
       }
@@ -119,7 +103,6 @@ export function useCapture() {
     error,
     isUploading,
     uploadPhoto,
-    uploadVoice,
     submitText,
     reset,
   };
