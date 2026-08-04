@@ -1,12 +1,15 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Share, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { colors } from "../../src/constants/colors";
 import { Button } from "../../src/components/ui/Button";
+import { ActionCard } from "../../src/components/actions/ActionCard";
 import { useHouseholds, useCreateHousehold, useLeaveHousehold, useHousehold } from "../../src/hooks/useHouseholds";
 import { useAuthStore } from "../../src/stores/authStore";
 import { trackInviteEvent } from "../../src/services/analytics";
 import { trackEvent } from "../../src/lib/posthog";
+import { fetchHouseholdFeed } from "../../src/services/household";
+import type { ActionItem } from "../../src/services/actions";
 
 export default function HouseholdScreen() {
   const user = useAuthStore((s) => s.user);
@@ -18,6 +21,11 @@ export default function HouseholdScreen() {
   const [houseName, setHouseName] = useState("");
   const inviteCountRef = useRef(0);
   const [invitesSent, setInvitesSent] = useState(0);
+
+  // Household feed state
+  const [feedActions, setFeedActions] = useState<ActionItem[]>([]);
+  const [isLoadingFeed, setIsLoadingFeed] = useState(false);
+  const [showFeed, setShowFeed] = useState(true);
 
   const activeHousehold = households?.[0];
   const { data: householdDetails } = useHousehold(activeHousehold?.id);
@@ -75,6 +83,16 @@ export default function HouseholdScreen() {
       ]
     );
   };
+
+  // Fetch household feed when household is available
+  useEffect(() => {
+    if (!activeHousehold?.id || activeHousehold.id === "demo") return;
+    setIsLoadingFeed(true);
+    fetchHouseholdFeed(activeHousehold.id)
+      .then((res) => setFeedActions(res.actions))
+      .catch(() => setFeedActions([]))
+      .finally(() => setIsLoadingFeed(false));
+  }, [activeHousehold?.id]);
 
   const members = householdDetails?.members || [];
   const isAdmin = householdDetails?.members?.find((m) => m.user_id === user?.id)?.role === "admin";
@@ -209,6 +227,57 @@ export default function HouseholdScreen() {
           )}
 
           <View style={{ marginTop: 24, marginBottom: 40 }}>
+            {/* ── Household Shared Feed ── */}
+            {activeHousehold && activeHousehold.id !== "demo" && (
+              <View style={{ marginBottom: 24 }}>
+                <View style={styles.feedHeaderRow}>
+                  <Text style={styles.sectionTitle}>Shared Memories</Text>
+                  <TouchableOpacity onPress={() => setShowFeed(!showFeed)} hitSlop={8}>
+                    <Text style={styles.feedToggleText}>
+                      {showFeed ? "Hide" : "Show"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {showFeed && (
+                  <>
+                    {isLoadingFeed ? (
+                      <View style={styles.feedLoading}>
+                        <ActivityIndicator size="small" color={colors.brand.primary} />
+                        <Text style={styles.feedLoadingText}>Loading shared memories...</Text>
+                      </View>
+                    ) : feedActions.length === 0 ? (
+                      <View style={styles.feedEmpty}>
+                        <Text style={styles.feedEmptyIcon}>📭</Text>
+                        <Text style={styles.feedEmptyTitle}>No shared memories yet</Text>
+                        <Text style={styles.feedEmptySubtext}>
+                          When someone shares a memory with the household, it will appear here.
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.feedList}>
+                        {feedActions.map((a) => (
+                          <ActionCard
+                            key={a.id}
+                            type={
+                              a.action_type === "grocery_list"
+                                ? "list-item"
+                                : (a.action_type as any)
+                            }
+                            title={a.title}
+                            detail={a.description}
+                            date={a.due_date}
+                            status={a.status === "completed" ? "confirmed" : "pending"}
+                            onEdit={() => router.push(`/action/${a.id}`)}
+                          />
+                        ))}
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            )}
+
             <Button
               title="Leave Household"
               onPress={handleLeave}
@@ -262,4 +331,60 @@ const styles = StyleSheet.create({
   memberRole: { fontSize: 13, color: colors.text.muted, marginTop: 2 },
   adminBadge: { backgroundColor: colors.accent.complete + "20", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   adminBadgeText: { fontSize: 12, fontWeight: "600", color: colors.accent.complete },
+
+  // ── Feed section ──
+  feedHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  feedToggleText: {
+    fontSize: 13,
+    color: colors.brand.primary,
+    fontWeight: "600",
+  },
+  feedLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    gap: 8,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  feedLoadingText: {
+    fontSize: 13,
+    color: colors.text.muted,
+  },
+  feedEmpty: {
+    alignItems: "center",
+    padding: 24,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: "dashed",
+  },
+  feedEmptyIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  feedEmptyTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text.primary,
+    marginBottom: 4,
+  },
+  feedEmptySubtext: {
+    fontSize: 13,
+    color: colors.text.muted,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  feedList: {
+    gap: 8,
+  },
 });

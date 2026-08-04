@@ -1,20 +1,21 @@
-import { useState, useCallback, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal } from "react-native";
+import { useState, useCallback, useMemo } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, router, Link } from "expo-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors } from "../../src/constants/colors";
 import { Button } from "../../src/components/ui/Button";
 import { useAction, useUpdateAction } from "../../src/hooks/useActions";
-import * as actionsService from "../../src/services/actions";
 import { useNotifications } from "../../src/hooks/useNotifications";
 import { useCalendar } from "../../src/hooks/useCalendar";
-import { Skeleton } from "../../src/components/ui/Skeleton";
-import { useHouseholds, useHousehold, useAcknowledgeAction } from "../../src/hooks/useHouseholds";
+import { useCaptureStore } from "../../src/stores/captureStore";
 import { useAuthStore } from "../../src/stores/authStore";
-import { useBiometricAuth } from "../../src/hooks/useBiometricAuth";
-
-const NOTIF_EXPLAINER_KEY = "@snapdone/notif_explainer_seen";
+import { useHouseholdDetail } from "../../src/hooks/useHousehold";
+import { MemberPicker } from "../../src/components/household/MemberPicker";
+import { shareAction, unshareAction } from "../../src/services/household";
+import type { PickerMember } from "../../src/components/household/MemberPicker";
+import { locationContextFromText, getLocationBadgeIcon } from "../../src/utils/locationContext";
+import { useUpdateMemoryState } from "../../src/hooks/useMemories";
+import type { MemoryState } from "../../src/services/memories";
+import { Skeleton } from "../../src/components/ui/Skeleton";
 
 const CATEGORIES = [
   { key: "event", icon: "📅", label: "Calendar Event", color: colors.brand.primary },
@@ -32,156 +33,106 @@ const PRIORITIES = [
 
 export default function ActionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: action, isLoading, isError, error, refetch } = useAction(id || "");
+  const { data: action, isLoading } = useAction(id || "");
   const updateAction = useUpdateAction();
-
-  const queryClient = useQueryClient();
-  const scheduleMutation = useMutation({
-    mutationFn: ({ actionId, dueDate, chosenSuggestion, source }: { actionId: string; dueDate: string; chosenSuggestion: string; source: "suggested" | "custom_date" }) =>
-      actionsService.scheduleAction(actionId, dueDate, chosenSuggestion, source),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["action", id as string] });
-      queryClient.invalidateQueries({ queryKey: ["actions"] });
-    },
-  });
-
-  const calculateDateFromSuggestion = (suggestion: string): Date => {
-    const now = new Date();
-    const lower = suggestion.toLowerCase();
-    if (lower.includes("tomorrow")) { const d = new Date(now); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d; }
-    if (lower.includes("evening") || lower.includes("tonight")) { const d = new Date(now); d.setHours(18, 0, 0, 0); if (d <= now) d.setDate(d.getDate() + 1); return d; }
-    if (lower.includes("saturday")) { const d = new Date(now); const days = (6 - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate() + days); d.setHours(9, 0, 0, 0); return d; }
-    if (lower.includes("sunday")) { const d = new Date(now); const days = (7 - d.getDay()) % 7 || 7; d.setDate(d.getDate() + days); d.setHours(9, 0, 0, 0); return d; }
-    if (lower.includes("weekend")) { const d = new Date(now); const days = (6 - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate() + days); d.setHours(10, 0, 0, 0); return d; }
-    if (lower.includes("next week")) { const d = new Date(now); d.setDate(d.getDate() + 7); d.setHours(9, 0, 0, 0); return d; }
-    const d = new Date(now); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d;
-  };
-
-  const handleScheduleSuggestion = useCallback((suggestion: string, source: "suggested" | "custom_date" = "suggested") => {
-    const dueDate = calculateDateFromSuggestion(suggestion);
-    scheduleMutation.mutate({ actionId: id as string, dueDate: dueDate.toISOString(), chosenSuggestion: suggestion, source });
-  }, [id, scheduleMutation]);
-
-  const scheduleDismiss = useCallback(() => { refetch(); }, [refetch]);
-
   const { scheduleReminder, requestPermissions: requestNotifPermissions } = useNotifications();
   const { createEvent, requestPermissions: requestCalendarPermissions } = useCalendar();
-  const { data: households } = useHouseholds();
-  const activeHouseholdId = households?.[0]?.id;
-  const { data: householdDetails } = useHousehold(activeHouseholdId);
-  const acknowledgeAction = useAcknowledgeAction();
-  const currentUser = useAuthStore((s) => s.user);
-  const householdMembers = householdDetails?.members || [];
-  const { isAuthenticated, isChecking, authenticate } = useBiometricAuth();
+  const captureDraftAssigneeId = useCaptureStore((s) => s.draft.assigneeId);
+  const captureDraftAssigneeName = useCaptureStore((s) => s.draft.assigneeDisplayName);
+  const setDraft = useCaptureStore((s) => s.setDraft);
+  const updateMemoryState = useUpdateMemoryState();
+  const user = useAuthStore((s) => s.user);
+
+  // Household sharing state
+  const activeHouseholdId = action?.household_id || undefined;
+  const { data: householdDetail, isLoading: isLoadingHousehold } = useHouseholdDetail(
+    activeHouseholdId || ""
+  );
 
   const [confirmed, setConfirmed] = useState(false);
-  const [category, setCategory] = useState<string>(action?.action_type || "event");
-  const [priority, setPriority] = useState<string>(action?.priority || "medium");
+  const [category, setCategory] = useState(action?.action_type || "event");
+  const [priority, setPriority] = useState(action?.priority || "medium");
   const [addToCalendar, setAddToCalendar] = useState(true);
-  const [shareWithHousehold, setShareWithHousehold] = useState(false);
-  const [assigneeId, setAssigneeId] = useState<string | null>(null);
-  const [showNotifExplainer, setShowNotifExplainer] = useState(false);
-  const [notifExplainerSeen, setNotifExplainerSeen] = useState(false);
-  const [pendingNotifFlow, setPendingNotifFlow] = useState(false);
+  const [shareWithHousehold, setShareWithHousehold] = useState(!!action?.household_id);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [isSharing, setIsSharing] = useState(false);
+  const [clientAssigneeId, setClientAssigneeId] = useState<string | null>(captureDraftAssigneeId || null);
+  const [clientAssigneeName, setClientAssigneeName] = useState<string | null>(captureDraftAssigneeName || null);
+  const [memoryState, setMemoryState] = useState<MemoryState>(action?.memory_state || "active");
 
-  // Auto-acknowledge shared actions assigned to current user
-  useEffect(() => {
-    if (action && action.assignee_id && currentUser && action.assignee_id === currentUser.id && action.status !== "completed") {
-      acknowledgeAction.mutate(action.id);
-    }
-  }, [action?.id, action?.assignee_id, currentUser?.id]);
+  // Household members excluding current user
+  const householdMembers: PickerMember[] = useMemo(() => {
+    if (!householdDetail?.members) return [];
+    return householdDetail.members
+      .filter((m) => m.user_id !== user?.id)
+      .map((m) => ({
+        user_id: m.user_id,
+        display_name: m.display_name,
+        role: m.role,
+      }));
+  }, [householdDetail, user?.id]);
 
-  // Check on mount if the notification explainer has been shown before
-  useEffect(() => {
-    AsyncStorage.getItem(NOTIF_EXPLAINER_KEY).then((val) => {
-      if (val === "true") {
-        setNotifExplainerSeen(true);
-      }
-    });
-  }, []);
+  // Whether this action was already shared (has existing household_id)
+  const isAlreadyShared = !!action?.household_id;
 
-  const handleExplainerDone = useCallback(async () => {
-    setShowNotifExplainer(false);
-    setNotifExplainerSeen(true);
-    setPendingNotifFlow(false);
-    // Persist that the user has seen it
-    await AsyncStorage.setItem(NOTIF_EXPLAINER_KEY, "true");
-    // Now trigger the actual permission request
-    const hasPermission = await requestNotifPermissions();
-    // Schedule the reminder
-    if (hasPermission && action?.due_date) {
-      const reminderDate = new Date(new Date(action.due_date).getTime() - 15 * 60 * 1000);
-      if (reminderDate > new Date()) {
-        try {
-          await scheduleReminder({
-            title: `Reminder: ${action.title || "Untitled"}`,
-            body: action.description || "Tap to view details",
-            date: reminderDate,
-            actionId: id,
-          });
-        } catch (notifErr: any) {
-          console.warn("Failed to schedule notification:", notifErr);
-        }
+  const handleMemoryStateChange = useCallback(
+    (newState: MemoryState) => {
+      setMemoryState(newState);
+      if (id && id !== "demo") {
+        updateMemoryState.mutate({ actionId: id, state: newState });
       }
-    }
-    // Add to calendar if toggled on
-    if (addToCalendar) {
-      const hasCalPermission = await requestCalendarPermissions();
-      if (hasCalPermission && action?.due_date) {
-        try {
-          await createEvent({
-            title: action.title || "Untitled Event",
-            notes: action.description || undefined,
-            startDate: new Date(action.due_date),
-            location: action.location || undefined,
-            alarms: [{ relativeOffset: -15 }],
-          });
-        } catch (calErr: any) {
-          console.warn("Failed to create calendar event:", calErr);
-        }
-      }
-    }
-    setConfirmed(true);
-  }, [requestNotifPermissions, scheduleReminder, action, id, addToCalendar, createEvent, requestCalendarPermissions]);
+    },
+    [id, updateMemoryState]
+  );
 
   const handleConfirm = useCallback(async () => {
     try {
       // Update on backend
       if (id && id !== "demo") {
-        const updateData: Record<string, any> = { status: "active", priority };
-        if (shareWithHousehold && activeHouseholdId) {
-          updateData.household_id = activeHouseholdId;
-          if (assigneeId) {
-            updateData.assignee_id = assigneeId;
-          }
+        const patchData: Record<string, unknown> = { status: "active", priority };
+        if (clientAssigneeId) {
+          patchData.assignee_id = clientAssigneeId;
         }
-        await updateAction.mutateAsync({ id, data: updateData });
+        await updateAction.mutateAsync({ id, data: patchData as any });
       }
 
-      // Schedule notification reminder — show explainer first if needed
-      if (action?.due_date) {
-        if (notifExplainerSeen) {
-          const reminderDate = new Date(new Date(action.due_date).getTime() - 15 * 60 * 1000);
-          if (reminderDate > new Date()) {
-            const hasNotifPermission = await requestNotifPermissions();
-            if (hasNotifPermission) {
-              try {
-                await scheduleReminder({
-                  title: `Reminder: ${action.title || "Untitled"}`,
-                  body: action.description || "Tap to view details",
-                  date: reminderDate,
-                  actionId: id,
-                });
-              } catch (notifErr: any) {
-                console.warn("Failed to schedule notification:", notifErr);
-              }
-            }
+      // Handle sharing — send selected members to backend
+      if (shareWithHousehold && selectedMemberIds.length > 0 && id && id !== "demo") {
+        setIsSharing(true);
+        try {
+          // If already shared and list changed, unshare then reshare
+          if (isAlreadyShared) {
+            await unshareAction(id);
           }
-        } else {
-          // First time — show explainer
-          setPendingNotifFlow(true);
-          setShowNotifExplainer(true);
-          return; // handleExplainerDone will continue the flow
+          await shareAction(id, selectedMemberIds);
+        } catch (shareErr: any) {
+          // Sharing is non-blocking — log but don't block confirmation
+          console.warn("Sharing failed:", shareErr.message);
+        } finally {
+          setIsSharing(false);
+        }
+      } else if (isAlreadyShared && !shareWithHousehold && id && id !== "demo") {
+        // User toggled sharing off on a previously shared action
+        setIsSharing(true);
+        try {
+          await unshareAction(id);
+        } catch (shareErr: any) {
+          console.warn("Unshare failed:", shareErr.message);
+        } finally {
+          setIsSharing(false);
+        }
+      }
+
+      // Schedule notification reminder
+      if (action?.due_date) {
+        const hasNotifPermission = await requestNotifPermissions();
+        if (hasNotifPermission) {
+          await scheduleReminder({
+            title: `Reminder: ${action.title}`,
+            body: action.description || "",
+            date: new Date(new Date(action.due_date).getTime() - 15 * 60 * 1000), // 15 min before
+            actionId: id,
+          });
         }
       }
 
@@ -189,17 +140,13 @@ export default function ActionDetailScreen() {
       if (addToCalendar) {
         const hasCalPermission = await requestCalendarPermissions();
         if (hasCalPermission && action?.due_date) {
-          try {
-            await createEvent({
-              title: action.title || "Untitled Event",
-              notes: action.description || undefined,
-              startDate: new Date(action.due_date),
-              location: action.location || undefined,
-              alarms: [{ relativeOffset: -15 }],
-            });
-          } catch (calErr: any) {
-            console.warn("Failed to create calendar event:", calErr);
-          }
+          await createEvent({
+            title: action.title,
+            notes: action.description,
+            startDate: new Date(action.due_date),
+            location: action.location || undefined,
+            alarms: [{ relativeOffset: -15 }],
+          });
         }
       }
 
@@ -207,7 +154,13 @@ export default function ActionDetailScreen() {
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to save action");
     }
-  }, [action, id, priority, addToCalendar, updateAction, scheduleReminder, requestNotifPermissions, createEvent, requestCalendarPermissions, notifExplainerSeen, shareWithHousehold, activeHouseholdId, assigneeId]);
+  }, [action, id, priority, addToCalendar, shareWithHousehold, selectedMemberIds, isAlreadyShared, clientAssigneeId, updateAction, scheduleReminder, requestNotifPermissions, createEvent, requestCalendarPermissions]);
+
+  const dismissAssignee = useCallback(() => {
+    setClientAssigneeId(null);
+    setClientAssigneeName(null);
+    setDraft({ assigneeId: undefined, assigneeDisplayName: undefined });
+  }, [setDraft]);
 
   if (isLoading) {
     return (
@@ -217,36 +170,19 @@ export default function ActionDetailScreen() {
     );
   }
 
-  if (isError) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Could not load action</Text>
-          <Text style={styles.errorText}>
-            The server may be unavailable. Please check your connection and try again.
-          </Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
-            <Text style={styles.retryBtnText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  const actionTitle = action?.title || "Untitled";
-  const actionDetail = action?.description || null;
-  const actionDate = action?.due_date ? new Date(action.due_date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "No date set";
-  const actionTime = action?.due_date ? new Date(action.due_date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : null;
+  const actionTitle = action?.title || "Dentist Appointment";
+  const actionDetail = action?.description || "123 Main St, Suite 200 · Dr. Smith";
+  const actionDate = action?.due_date ? new Date(action.due_date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "April 12, 2026";
+  const actionTime = action?.due_date ? new Date(action.due_date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "3:00 PM";
 
   if (confirmed) {
     return (
       <View style={styles.confirmedContainer}>
-        <Text style={styles.confirmedIcon}>✨</Text>
-        <Text style={styles.confirmedTitle}>Done. It's out of your head now.</Text>
+        <Text style={styles.confirmedIcon}>✅</Text>
+        <Text style={styles.confirmedTitle}>I've got it.</Text>
         <Text style={styles.confirmedText}>
-          {addToCalendar ? "Added to your calendar. " : ""}
-          Snap saved. I'll snap back when it's time.
+          {addToCalendar ? "It's on your calendar. " : ""}
+          I'll remind you when the time comes.
         </Text>
         <Link href="/(tabs)" asChild>
           <TouchableOpacity style={styles.backHomeBtn}>
@@ -258,179 +194,199 @@ export default function ActionDetailScreen() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Link href="/(tabs)" asChild>
-            <TouchableOpacity><Text style={styles.backBtn}>← Back</Text></TouchableOpacity>
-          </Link>
-          <Text style={styles.headerTitle}>Review Action</Text>
-          <View style={{ width: 60 }} />
-        </View>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <Link href="/(tabs)" asChild>
+          <TouchableOpacity><Text style={styles.backBtn}>← Back</Text></TouchableOpacity>
+        </Link>
+        <Text style={styles.headerTitle}>Does this look right?</Text>
+        <View style={{ width: 60 }} />
+      </View>
 
-        <View style={styles.confidenceBar}>
-          <Text style={styles.confidenceIcon}>🤖</Text>
-          <View style={styles.confidenceContent}>
-            <Text style={styles.confidenceText}>AI extracted this with high confidence</Text>
-            <View style={styles.confidenceTrack}>
-              <View style={[styles.confidenceFill, { width: `${Math.min(Math.max((action?.confidence_score ?? 0.92) * 100, 5), 100)}%` }]} />
-            </View>
+      <View style={styles.confidenceBar}>
+        <Text style={styles.confidenceIcon}>💡</Text>
+        <View style={styles.confidenceContent}>
+          <Text style={styles.confidenceText}>I understood this with high confidence</Text>
+          <View style={styles.confidenceTrack}>
+            <View style={[styles.confidenceFill, { width: "92%" }]} />
           </View>
-          <Text style={styles.confidencePct}>{Math.round(Math.min(Math.max((action?.confidence_score ?? 0.92) * 100, 5), 100))}%</Text>
         </View>
+        <Text style={styles.confidencePct}>92%</Text>
+      </View>
 
-        <View style={styles.card}>
-          {action?.is_sensitive && !isAuthenticated && (
+      {clientAssigneeName && (
+        <View style={styles.assigneeBadge}>
+          <View style={styles.assigneeInfo}>
+            <Text style={styles.assigneeIcon}>👤</Text>
+            <Text style={styles.assigneeText}>Assigned to {clientAssigneeName}</Text>
+          </View>
+          <TouchableOpacity onPress={dismissAssignee} hitSlop={8}>
+            <Text style={styles.assigneeDismiss}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Location badge: show when backend returns a relevant location_context, or as static fallback */}
+      {action?.location_context?.relevant ? (
+        <View style={styles.locationBadge}>
+          <Text style={styles.locationIcon}>{getLocationBadgeIcon(action.location)}</Text>
+          <Text style={styles.locationText}>
+            Near {action.location}
+          </Text>
+        </View>
+      ) : action?.location && !action?.location_context ? (
+        <View style={[styles.locationBadge, { opacity: 0.6 }]}>
+          <Text style={styles.locationIcon}>{getLocationBadgeIcon(action.location)}</Text>
+          <Text style={styles.locationText}>
+            {action.location}
+          </Text>
+        </View>
+      ) : null}
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{actionTitle}</Text>
+        <Text style={styles.cardDetail}>{actionDetail}</Text>
+        <View style={styles.divider} />
+
+        <Text style={styles.sectionLabel}>Category</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+          {CATEGORIES.map((c) => (
             <TouchableOpacity
-              style={styles.sensitiveOverlay}
-              onPress={() => authenticate()}
-              disabled={isChecking}
-              activeOpacity={0.8}
+              key={c.key}
+              style={[styles.chip, category === c.key && { backgroundColor: c.color + "20", borderColor: c.color }]}
+              onPress={() => setCategory(c.key)}
             >
-              <Text style={styles.sensitiveOverlayIcon}>🔒</Text>
-              <Text style={styles.sensitiveOverlayTitle}>Sensitive Content</Text>
-              <Text style={styles.sensitiveOverlayText}>
-                {isChecking ? "Authenticating..." : "Tap to unlock with Face ID / Touch ID"}
-              </Text>
+              <Text style={styles.chipIcon}>{c.icon}</Text>
+              <Text style={[styles.chipLabel, category === c.key && { color: c.color }]}>{c.label}</Text>
             </TouchableOpacity>
-          )}
-          <Text style={styles.cardTitle}>{actionTitle}</Text>
-          {actionDetail && <Text style={styles.cardDetail}>{actionDetail}</Text>}
-          <View style={styles.divider} />
+          ))}
+        </ScrollView>
 
-          <Text style={styles.sectionLabel}>Category</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-            {CATEGORIES.map((c) => (
-              <TouchableOpacity
-                key={c.key}
-                style={[styles.chip, category === c.key && { backgroundColor: c.color + "20", borderColor: c.color }]}
-                onPress={() => setCategory(c.key)}
-              >
-                <Text style={styles.chipIcon}>{c.icon}</Text>
-                <Text style={[styles.chipLabel, category === c.key && { color: c.color }]}>{c.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+        <View style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Date</Text>
+          <TouchableOpacity style={styles.fieldValue}>
+            <Text style={styles.fieldValueText}>{actionDate}</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Time</Text>
+          <TouchableOpacity style={styles.fieldValue}>
+            <Text style={styles.fieldValueText}>{actionTime}</Text>
+          </TouchableOpacity>
+        </View>
 
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>Date</Text>
-            <TouchableOpacity style={styles.fieldValue}>
-              <Text style={styles.fieldValueText}>{actionDate}</Text>
+        <Text style={styles.sectionLabel}>Priority</Text>
+        <View style={styles.priorityRow}>
+          {PRIORITIES.map((p) => (
+            <TouchableOpacity
+              key={p.key}
+              style={[styles.priorityChip, priority === p.key && { backgroundColor: p.color + "20", borderColor: p.color }]}
+              onPress={() => setPriority(p.key)}
+            >
+              <Text style={[styles.priorityText, priority === p.key && { color: p.color, fontWeight: "700" }]}>{p.label}</Text>
             </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleLeft}>
+            <Text style={styles.toggleIcon}>📅</Text>
+            <Text style={styles.toggleLabel}>Add to calendar</Text>
           </View>
-          {actionTime && (
-            <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Time</Text>
-              <TouchableOpacity style={styles.fieldValue}>
-                <Text style={styles.fieldValueText}>{actionTime}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <Switch value={addToCalendar} onValueChange={setAddToCalendar} trackColor={{ false: colors.border, true: colors.brand.primary + "80" }} thumbColor={addToCalendar ? colors.brand.primary : "#f4f3f4"} />
+        </View>
 
-          {/* Scheduling prompt for dateless actions */}
-          {!action?.due_date && action?.scheduling_suggestions && action.scheduling_suggestions.length > 0 && (
-            <View style={styles.scheduleSection}>
-              <View style={styles.divider} />
-              <Text style={styles.sectionLabel}>When should we remind you?</Text>
-              <View style={styles.scheduleChips}>
-                {action.scheduling_suggestions.map((suggestion) => (
-                  <TouchableOpacity
-                    key={suggestion}
-                    style={styles.scheduleChip}
-                    onPress={() => handleScheduleSuggestion(suggestion)}
-                  >
-                    <Text style={styles.scheduleChipText}>{suggestion}</Text>
-                  </TouchableOpacity>
-                ))}
-                <TouchableOpacity style={styles.scheduleChipPick}>
-                  <Text style={styles.scheduleChipText}>Pick a date</Text>
+        {/* ── Household Sharing ── */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleLeft}>
+            <Text style={styles.toggleIcon}>🏠</Text>
+            <Text style={styles.toggleLabel}>
+              {isAlreadyShared ? "Shared with household" : "Share with household"}
+            </Text>
+          </View>
+          <Switch
+            value={shareWithHousehold}
+            onValueChange={(val) => {
+              setShareWithHousehold(val);
+              if (!val) setSelectedMemberIds([]);
+            }}
+            trackColor={{ false: colors.border, true: colors.accent.complete + "80" }}
+            thumbColor={shareWithHousehold ? colors.accent.complete : "#f4f3f4"}
+          />
+        </View>
+
+        {/* Show member picker when sharing is enabled */}
+        {shareWithHousehold && (
+          <View style={{ marginTop: 4, marginBottom: 8 }}>
+            {isLoadingHousehold ? (
+              <View style={styles.memberPickerLoading}>
+                <ActivityIndicator size="small" color={colors.brand.primary} />
+                <Text style={styles.memberPickerLoadingText}>Loading household...</Text>
+              </View>
+            ) : householdDetail ? (
+              <MemberPicker
+                members={householdMembers}
+                selectedIds={selectedMemberIds}
+                onSelectionChange={setSelectedMemberIds}
+                isSaving={isSharing}
+                alreadySharedIds={isAlreadyShared ? householdMembers.map(m => m.user_id) : []}
+              />
+            ) : (
+              <View style={styles.memberPickerEmpty}>
+                <Text style={styles.memberPickerEmptyIcon}>👨‍👩‍👧‍👦</Text>
+                <Text style={styles.memberPickerEmptyText}>
+                  You're not in a household yet.
+                </Text>
+                <TouchableOpacity onPress={() => router.push("/(tabs)/household")}>
+                  <Text style={styles.memberPickerEmptyLink}>Create or join a household →</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.scheduleDismiss} onPress={() => scheduleDismiss()}>
-                <Text style={styles.scheduleDismissText}>Not now</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <Text style={styles.sectionLabel}>Priority</Text>
-          <View style={styles.priorityRow}>
-            {PRIORITIES.map((p) => (
-              <TouchableOpacity
-                key={p.key}
-                style={[styles.priorityChip, priority === p.key && { backgroundColor: p.color + "20", borderColor: p.color }]}
-                onPress={() => setPriority(p.key)}
-              >
-                <Text style={[styles.priorityText, priority === p.key && { color: p.color, fontWeight: "700" }]}>{p.label}</Text>
-              </TouchableOpacity>
-            ))}
+            )}
           </View>
+        )}
 
-          <View style={styles.divider} />
-
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleLeft}>
-              <Text style={styles.toggleIcon}>📅</Text>
-              <Text style={styles.toggleLabel}>Add to calendar</Text>
-            </View>
-            <Switch value={addToCalendar} onValueChange={setAddToCalendar} trackColor={{ false: colors.border, true: colors.brand.primary + "80" }} thumbColor={addToCalendar ? colors.brand.primary : "#f4f3f4"} />
-          </View>
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleLeft}>
-              <Text style={styles.toggleIcon}>🏠</Text>
-              <Text style={styles.toggleLabel}>Share with household</Text>
-            </View>
-            <Switch value={shareWithHousehold} onValueChange={setShareWithHousehold} trackColor={{ false: colors.border, true: colors.accent.complete + "80" }} thumbColor={shareWithHousehold ? colors.accent.complete : "#f4f3f4"} />
-          </View>
-          {shareWithHousehold && householdMembers.length > 1 && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.sectionLabel}>Assign to</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-                <TouchableOpacity
-                  style={[styles.chip, !assigneeId && { backgroundColor: colors.brand.primary + "20", borderColor: colors.brand.primary }]}
-                  onPress={() => setAssigneeId(null)}
-                >
-                  <Text style={[styles.chipLabel, !assigneeId && { color: colors.brand.primary }]}>Anyone</Text>
-                </TouchableOpacity>
-                {householdMembers.map((m) => (
-                  <TouchableOpacity
-                    key={m.user_id}
-                    style={[styles.chip, assigneeId === m.user_id && { backgroundColor: colors.brand.primary + "20", borderColor: colors.brand.primary }]}
-                    onPress={() => setAssigneeId(m.user_id === assigneeId ? null : m.user_id)}
-                  >
-                    <Text style={[styles.chipLabel, assigneeId === m.user_id && { color: colors.brand.primary }]}>
-                      {m.display_name} {m.user_id === currentUser?.id ? "(Me)" : ""}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </>
-          )}
-        </View>
-
-        <View style={styles.actions}>
-          <Button title="✓ Confirm & Save" onPress={handleConfirm} variant="primary" size="lg" fullWidth loading={updateAction.isPending} />
-          <Button title="✏️ Edit Details" onPress={() => {}} variant="secondary" size="md" fullWidth />
-          <Button title="Dismiss" onPress={() => router.replace("/(tabs)")} variant="ghost" size="md" fullWidth />
-        </View>
-      </ScrollView>
-
-      {/* Notification explainer modal — shown once before first permission request */}
-      <Modal visible={showNotifExplainer} transparent animationType="fade" onRequestClose={() => setShowNotifExplainer(false)}>
-        <View style={styles.explainerOverlay}>
-          <View style={styles.explainerCard}>
-            <Text style={styles.explainerIcon}>🔔</Text>
-            <Text style={styles.explainerTitle}>One quick thing...</Text>
-            <Text style={styles.explainerText}>
-              SnapDone needs permission to send you notifications for your own reminders — like appointments, bills, and tasks you've captured. We never send spam or promotional notifications.
+        {/* Show sharing info when already shared but toggle off */}
+        {isAlreadyShared && !shareWithHousehold && (
+          <View style={styles.unshareNotice}>
+            <Text style={styles.unshareNoticeIcon}>🔓</Text>
+            <Text style={styles.unshareNoticeText}>
+              This memory will be unshared when you save. Other household members will no longer see it.
             </Text>
-            <TouchableOpacity style={styles.explainerBtn} onPress={handleExplainerDone}>
-              <Text style={styles.explainerBtnText}>Got it</Text>
-            </TouchableOpacity>
           </View>
+        )}
+
+        <View style={styles.divider} />
+
+        {/* Memory State */}
+        <Text style={styles.sectionLabel}>Memory State</Text>
+        <View style={styles.memoryChips}>
+          {([
+            { key: "active" as MemoryState, icon: "🔔", label: "SnapBack will remind me" },
+            { key: "dormant" as MemoryState, icon: "💭", label: "PIP keeps an eye on this" },
+            { key: "archived" as MemoryState, icon: "📦", label: "Don't surface this" },
+          ]).map((s) => (
+            <TouchableOpacity
+              key={s.key}
+              style={[styles.memoryChip, memoryState === s.key && styles.memoryChipActive]}
+              onPress={() => handleMemoryStateChange(s.key)}
+            >
+              <Text style={styles.memoryChipIcon}>{s.icon}</Text>
+              <Text style={[styles.memoryChipLabel, memoryState === s.key && styles.memoryChipLabelActive]}>
+                {s.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </Modal>
-    </View>
+      </View>
+
+      <View style={styles.actions}>
+        <Button title="Yes, remember this" onPress={handleConfirm} variant="primary" size="lg" fullWidth loading={updateAction.isPending} />
+        <Button title="✏️ Edit Details" onPress={() => {}} variant="secondary" size="md" fullWidth />
+        <Button title="Let this go" onPress={() => router.replace("/(tabs)")} variant="ghost" size="md" fullWidth />
+      </View>
+    </ScrollView>
   );
 }
 
@@ -446,6 +402,14 @@ const styles = StyleSheet.create({
   confidenceTrack: { height: 4, backgroundColor: colors.brand.primary + "30", borderRadius: 2 },
   confidenceFill: { height: 4, backgroundColor: colors.brand.primary, borderRadius: 2 },
   confidencePct: { fontSize: 13, fontWeight: "700", color: colors.brand.dark },
+  assigneeBadge: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.brand.light, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.brand.primary + "30" },
+  assigneeInfo: { flexDirection: "row", alignItems: "center", gap: 8 },
+  assigneeIcon: { fontSize: 16 },
+  assigneeText: { fontSize: 14, color: colors.brand.dark, fontWeight: "600", flex: 1 },
+  assigneeDismiss: { fontSize: 16, color: colors.text.muted, fontWeight: "700", paddingHorizontal: 4 },
+  locationBadge: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.surface, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
+  locationIcon: { fontSize: 16 },
+  locationText: { fontSize: 14, color: colors.text.primary, fontWeight: "500", flex: 1 },
   card: { backgroundColor: colors.white, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border, marginBottom: 24 },
   cardTitle: { fontSize: 22, fontWeight: "700", color: colors.deep, marginBottom: 6 },
   cardDetail: { fontSize: 15, color: colors.text.muted, lineHeight: 22, marginBottom: 16 },
@@ -474,36 +438,76 @@ const styles = StyleSheet.create({
   backHomeBtn: { backgroundColor: colors.brand.primary, paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12 },
   backHomeText: { color: colors.white, fontSize: 17, fontWeight: "700" },
 
-  // Notification explainer modal
-  explainerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 32 },
-  explainerCard: { backgroundColor: colors.white, borderRadius: 20, padding: 32, alignItems: "center", maxWidth: 340, width: "100%" },
-  explainerIcon: { fontSize: 40, marginBottom: 12 },
-  explainerTitle: { fontSize: 20, fontWeight: "800", color: colors.deep, marginBottom: 12, textAlign: "center" },
-  explainerText: { fontSize: 15, color: colors.text.muted, textAlign: "center", lineHeight: 22, marginBottom: 24 },
-  explainerBtn: { backgroundColor: colors.brand.primary, paddingVertical: 14, paddingHorizontal: 40, borderRadius: 12 },
-  explainerBtnText: { color: colors.white, fontSize: 17, fontWeight: "700" },
+  // Memory state chips
+  memoryChips: { gap: 8, marginBottom: 8 },
+  memoryChip: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, marginBottom: 8 },
+  memoryChipActive: { borderColor: colors.accent.warm, backgroundColor: colors.accent.warm + "15" },
+  memoryChipIcon: { fontSize: 14 },
+  memoryChipLabel: { fontSize: 13, color: colors.text.muted, fontWeight: "500" },
+  memoryChipLabelActive: { color: colors.accent.warm, fontWeight: "600" },
 
-  // Error state
-  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32 },
-  errorIcon: { fontSize: 48, marginBottom: 16 },
-  errorTitle: { fontSize: 20, fontWeight: "700", color: colors.deep, marginBottom: 8, textAlign: "center" },
-  errorText: { fontSize: 15, color: colors.text.muted, textAlign: "center", lineHeight: 22, marginBottom: 24 },
-  retryBtn: { backgroundColor: colors.brand.primary, paddingVertical: 12, paddingHorizontal: 32, borderRadius: 12 },
-  retryBtnText: { color: colors.white, fontSize: 16, fontWeight: "600" },
+  // Member picker loading
+  memberPickerLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 8,
+  },
+  memberPickerLoadingText: {
+    fontSize: 13,
+    color: colors.text.muted,
+  },
 
-  /* Scheduling prompt */
-  scheduleSection: { marginBottom: 12 },
-  scheduleChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
-  scheduleChip: { backgroundColor: colors.brand.light, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: colors.brand.primary },
-  scheduleChipPick: { backgroundColor: colors.white, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: colors.border, borderStyle: "dashed" },
-  scheduleChipText: { fontSize: 14, fontWeight: "600", color: colors.brand.dark },
-  scheduleDismiss: { alignItems: "center", paddingVertical: 8 },
-  scheduleDismissText: { fontSize: 14, color: colors.text.muted, fontWeight: "500" },
+  // Member picker empty (no household)
+  memberPickerEmpty: {
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  memberPickerEmptyIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  memberPickerEmptyText: {
+    fontSize: 14,
+    color: colors.text.muted,
+    marginBottom: 8,
+  },
+  memberPickerEmptyLink: {
+    fontSize: 14,
+    color: colors.brand.primary,
+    fontWeight: "600",
+  },
 
-  /* Sensitive content overlay */
-  sensitiveOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(255,255,255,0.92)", borderRadius: 16, alignItems: "center", justifyContent: "center", zIndex: 10, padding: 24 },
-  sensitiveOverlayIcon: { fontSize: 40, marginBottom: 12 },
-  sensitiveOverlayTitle: { fontSize: 18, fontWeight: "700", color: colors.deep, marginBottom: 8, textAlign: "center" },
-  sensitiveOverlayText: { fontSize: 14, color: colors.text.muted, textAlign: "center", lineHeight: 20 },
-
+  // Unshare notice
+  unshareNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: colors.accent.warm + "15",
+    borderRadius: 10,
+    padding: 12,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.accent.warm + "40",
+  },
+  unshareNoticeIcon: {
+    fontSize: 16,
+    marginTop: 1,
+  },
+  unshareNoticeText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.accent.warm,
+    lineHeight: 18,
+    fontWeight: "500",
+  },
 });

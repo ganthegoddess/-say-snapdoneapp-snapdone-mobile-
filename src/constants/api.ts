@@ -15,6 +15,7 @@ export const AUTH = {
   SIGNUP: `${API_PREFIX}/auth/signup`,
   LOGIN: `${API_PREFIX}/auth/login`,
   REFRESH: `${API_PREFIX}/auth/refresh`,
+  SOCIAL: `${API_PREFIX}/auth/social`,
 } as const;
 
 // Capture endpoints
@@ -31,6 +32,11 @@ export const ACTIONS = {
   COMPLETE: (id: string) => `${API_PREFIX}/actions/${id}/complete`,
   ACKNOWLEDGE: (id: string) => `${API_PREFIX}/actions/${id}/acknowledge`,
   SCHEDULE: (id: string) => `${API_PREFIX}/actions/${id}/schedule`,
+  MEMORY_STATE: (id: string) => `${API_PREFIX}/actions/${id}/memory-state`,
+  /** Share a memory with specific household members */
+  SHARE: (id: string) => `${API_PREFIX}/actions/${id}/share`,
+  /** Revoke sharing on a memory */
+  UNSHARE: (id: string) => `${API_PREFIX}/actions/${id}/share`,
 } as const;
 
 // Household endpoints
@@ -40,6 +46,8 @@ export const HOUSEHOLDS = {
   CREATE: `${API_PREFIX}/households`,
   JOIN: `${API_PREFIX}/households/join`,
   LEAVE: (id: string) => `${API_PREFIX}/households/${id}/leave`,
+  /** Household feed — memories shared within the household */
+  FEED: (id: string) => `${API_PREFIX}/households/${id}/feed`,
 } as const;
 
 // Subscription endpoints
@@ -84,4 +92,16 @@ export const UPLOAD_LIMITS = {
 export const FREE_TIER = {
   MAX_CAPTURES_PER_MONTH: 30,
   MAX_ACTIVE_ACTIONS: 5,
+} as const;
+
+// Memory / recall endpoints
+export const MEMORIES = {
+  RECALL: `${API_PREFIX}/memories/recall`,
+  ASK: `${API_PREFIX}/memories/ask`,
+} as const;
+
+// Analytics endpoints
+export const ANALYTICS = {
+  EVENT: `${API_PREFIX}/analytics/event`,
+  INVITE_EVENT: `${API_PREFIX}/analytics/invite-event`,
 } as const;

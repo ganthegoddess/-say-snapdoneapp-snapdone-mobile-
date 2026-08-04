@@ -22,13 +22,14 @@ import type { RecalledMemory } from "../../src/services/memories";
 const LOCATION_COOLDOWN = 30 * 60 * 1000; // 30 minutes
 const RECALL_COOLDOWN = 5 * 60 * 1000; // 5 minutes between recall checks
 
-type FilterKey = "all" | "reminders" | "events" | "lists" | "bills";
+type FilterKey = "all" | "reminders" | "events" | "lists" | "bills" | "shared";
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
   { key: "reminders", label: "Reminders" },
   { key: "events", label: "Events" },
   { key: "lists", label: "Lists" },
   { key: "bills", label: "Bills" },
+  { key: "shared", label: "Shared" },
 ];
 
 const TYPE_MAP: Record<string, string> = {
@@ -180,6 +181,7 @@ export default function HomeScreen() {
 
   const filteredActions = (actions || []).filter((a: ActionItem) => {
     if (activeFilter === "all") return true;
+    if (activeFilter === "shared") return !!a.household_id;
     if (activeFilter === "reminders") return a.action_type === "reminder";
     if (activeFilter === "events") return a.action_type === "event";
     if (activeFilter === "lists") return a.action_type === "task" || a.action_type === "grocery_list";
