@@ -24,6 +24,8 @@ export function useActions(filters?: { status?: string; action_type?: string; as
         let filtered = [...DEMO_ACTIONS];
         if (filters?.status) filtered = filtered.filter(a => a.status === filters.status);
         if (filters?.action_type) filtered = filtered.filter(a => a.action_type === filters.action_type);
+        if (filters?.assignee_id) filtered = filtered.filter(a => a.assignee_id === filters.assignee_id);
+        if (filters?.household_id) filtered = filtered.filter(a => a.household_id === filters.household_id);
         return filtered;
       }
     },
@@ -43,6 +45,7 @@ export function useAction(id: string) {
       }
     },
     enabled: !!id,
+    retry: 1,
   });
 }
 
