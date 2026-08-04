@@ -13,7 +13,10 @@ interface ActionCardProps {
   amount?: string;
   status: ActionStatus;
   source?: CaptureSource;
-  isSensitive?: boolean;
+  /** Display name of the person this action is assigned to */
+  assigneeName?: string;
+  /** True if the current user is the assignee */
+  isAssignedToMe?: boolean;
   onConfirm?: () => void;
   onEdit?: () => void;
   onDismiss?: () => void;
@@ -27,19 +30,14 @@ const TYPE_CONFIG: Record<ActionType, { icon: string; color: string; label: stri
   task: { icon: "✅", color: colors.accent.complete, label: "Task" },
 };
 
-export function ActionCard({ type, title, detail, date, amount, status, source, isSensitive, onConfirm, onEdit, onDismiss }: ActionCardProps) {
+export function ActionCard({ type, title, detail, date, amount, status, source, assigneeName, isAssignedToMe, onConfirm, onEdit, onDismiss }: ActionCardProps) {
   const config = TYPE_CONFIG[type];
   const isDone = status === "confirmed";
   const isDismissed = status === "dismissed";
   if (isDismissed) return null;
 
   return (
-    <View style={[styles.card, isDone && styles.cardDone, isSensitive && styles.cardSensitive]}>
-      {isSensitive && (
-        <View style={styles.sensitiveBadge}>
-          <Text style={styles.sensitiveIcon}>🔒</Text>
-        </View>
-      )}
+    <View style={[styles.card, isDone && styles.cardDone]}>
       <View style={styles.header}>
         <View style={styles.typeRow}>
           <Text style={styles.typeIcon}>{config.icon}</Text>
@@ -56,6 +54,15 @@ export function ActionCard({ type, title, detail, date, amount, status, source, 
           {amount && <Text style={[styles.metaText, styles.amount]}>{amount}</Text>}
         </View>
       )}
+      {/* Assignee badge */}
+      {assigneeName && (
+        <View style={[styles.assigneeBadge, isAssignedToMe && styles.assigneeBadgeMine]}>
+          <Text style={styles.assigneeIcon}>👤</Text>
+          <Text style={[styles.assigneeText, isAssignedToMe && styles.assigneeTextMine]}>
+            {isAssignedToMe ? "Assigned to you" : `Assigned to ${assigneeName}`}
+          </Text>
+        </View>
+      )}
       {status === "pending" && (
         <View style={styles.actions}>
           {onConfirm && <TouchableOpacity style={styles.confirmBtn} onPress={onConfirm}><Text style={styles.confirmText}>✓</Text></TouchableOpacity>}
@@ -63,7 +70,7 @@ export function ActionCard({ type, title, detail, date, amount, status, source, 
           {onDismiss && <TouchableOpacity style={styles.dismissBtn} onPress={onDismiss}><Text style={styles.dismissText}>✕</Text></TouchableOpacity>}
         </View>
       )}
-      {isDone && <View style={styles.doneBadge}><Text style={styles.doneText}>✓ Done</Text></View>}
+      {isDone && <View style={styles.doneBadge}><Text style={styles.doneText}>Got it</Text></View>}
     </View>
   );
 }
@@ -71,9 +78,6 @@ export function ActionCard({ type, title, detail, date, amount, status, source, 
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.white, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2, marginBottom: 10 },
   cardDone: { borderLeftWidth: 4, borderLeftColor: colors.accent.complete, opacity: 0.75 },
-  cardSensitive: { borderColor: "#FCD34D", borderWidth: 1.5 },
-  sensitiveBadge: { position: "absolute", top: 8, right: 8, backgroundColor: "rgba(251,191,36,0.2)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, zIndex: 1 },
-  sensitiveIcon: { fontSize: 12 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
   typeRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   typeIcon: { fontSize: 14 },
@@ -95,4 +99,26 @@ const styles = StyleSheet.create({
   dismissText: { fontSize: 14, color: colors.text.muted },
   doneBadge: { position: "absolute", top: 8, right: 8, backgroundColor: colors.accent.complete, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   doneText: { color: "#FFF", fontSize: 10, fontWeight: "600" },
+
+  // Assignee badge
+  assigneeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.surface,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  assigneeBadgeMine: {
+    backgroundColor: colors.brand.light + "40",
+    borderColor: colors.brand.primary + "40",
+  },
+  assigneeIcon: { fontSize: 12 },
+  assigneeText: { fontSize: 11, color: colors.text.muted, fontWeight: "500" },
+  assigneeTextMine: { color: colors.brand.dark, fontWeight: "600" },
 });
