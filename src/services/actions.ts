@@ -9,15 +9,17 @@ export interface ActionItem {
   status: "active" | "completed" | "dismissed" | "pending_confirmation";
   priority: "low" | "medium" | "high";
   due_date?: string;
+  /** Free-text place name extracted by AI pipeline (e.g. "Walmart", "Lincoln Elementary") */
   location?: string;
   amount?: number;
-  confidence_score?: number;
   household_id?: string;
   assignee_id?: string;
-  scheduling_suggestions?: string[];
-  is_sensitive?: boolean;
-  blurred_thumbnail_url?: string;
-  thumbnail_url?: string;
+  /** Display name of the assigned user (when available from backend) */
+  assignee_display_name?: string;
+  /** Dynamic location relevance computed by backend when place_name/place_type params are passed */
+  location_context?: { relevant: boolean; score: number; reason: string | null } | null;
+  /** Memory state for contextual recall: active = snap me, dormant = PIP watches, archived = hidden */
+  memory_state?: "active" | "dormant" | "archived";
   created_at: string;
   updated_at: string;
 }
@@ -33,9 +35,14 @@ interface ActionFilters {
   status?: string;
   action_type?: string;
   household_id?: string;
+  assignee_id?: string;
   limit?: number;
   offset?: number;
   sort?: string;
+  /** Pass place name from reverse geocode for dynamic location_context scoring */
+  place_name?: string;
+  /** Pass Google Places type for context-aware scoring */
+  place_type?: string;
 }
 
 /**
@@ -46,9 +53,12 @@ export async function fetchActions(filters: ActionFilters = {}): Promise<ActionL
   if (filters.status) params.set("status", filters.status);
   if (filters.action_type) params.set("action_type", filters.action_type);
   if (filters.household_id) params.set("household_id", filters.household_id);
+  if (filters.assignee_id) params.set("assignee_id", filters.assignee_id);
   if (filters.limit) params.set("limit", String(filters.limit));
   if (filters.offset) params.set("offset", String(filters.offset));
   if (filters.sort) params.set("sort", filters.sort);
+  if (filters.place_name) params.set("place_name", filters.place_name);
+  if (filters.place_type) params.set("place_type", filters.place_type);
 
   const query = params.toString();
   const endpoint = query ? `${ACTIONS.LIST}?${query}` : ACTIONS.LIST;
@@ -75,6 +85,7 @@ export async function updateAction(
     due_date: string;
     priority: string;
     location: string;
+    assignee_id: string | null;
   }>
 ): Promise<{ id: string; status: string; updated_at: string }> {
   return patch(ACTIONS.DETAIL(id), data);
@@ -92,13 +103,4 @@ export async function completeAction(id: string): Promise<{ id: string; status: 
  */
 export async function deleteAction(id: string): Promise<{ id: string; status: string }> {
   return del(ACTIONS.DETAIL(id));
-}
-/** Schedule a dateless action by setting its due_date. */
-export async function scheduleAction(
-  id: string,
-  dueDate: string,
-  chosenSuggestion: string,
-  source: "suggested" | "custom_date"
-): Promise<ActionItem> {
-  return patch<ActionItem>(ACTIONS.SCHEDULE(id), { due_date: dueDate, chosen_suggestion: chosenSuggestion, source });
 }

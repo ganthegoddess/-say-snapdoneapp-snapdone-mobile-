@@ -14,6 +14,7 @@ import { useCompleteAction, useDeleteAction } from "../../src/hooks/useActions";
 import { useLocationContext } from "../../src/hooks/useLocationContext";
 import { useLocationStore } from "../../src/stores/locationStore";
 import { useRecallMemories, useUpdateMemoryState } from "../../src/hooks/useMemories";
+import { useAuthStore } from "../../src/stores/authStore";
 import { getLocationBadgeIcon } from "../../src/utils/locationContext";
 import { trackEvent } from "../../src/lib/posthog";
 import type { ActionItem } from "../../src/services/actions";
@@ -22,7 +23,7 @@ import type { RecalledMemory } from "../../src/services/memories";
 const LOCATION_COOLDOWN = 30 * 60 * 1000; // 30 minutes
 const RECALL_COOLDOWN = 5 * 60 * 1000; // 5 minutes between recall checks
 
-type FilterKey = "all" | "reminders" | "events" | "lists" | "bills" | "shared";
+type FilterKey = "all" | "reminders" | "events" | "lists" | "bills" | "shared" | "assigned";
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
   { key: "reminders", label: "Reminders" },
@@ -30,6 +31,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "lists", label: "Lists" },
   { key: "bills", label: "Bills" },
   { key: "shared", label: "Shared" },
+  { key: "assigned", label: "Assigned" },
 ];
 
 const TYPE_MAP: Record<string, string> = {
@@ -98,6 +100,7 @@ export default function HomeScreen() {
 
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const isCheckingRef = useRef(false);
+  const user = useAuthStore((s) => s.user);
 
   // Foreground: location check + memory recall
   useEffect(() => {
@@ -182,6 +185,7 @@ export default function HomeScreen() {
   const filteredActions = (actions || []).filter((a: ActionItem) => {
     if (activeFilter === "all") return true;
     if (activeFilter === "shared") return !!a.household_id;
+    if (activeFilter === "assigned") return a.assignee_id === user?.id;
     if (activeFilter === "reminders") return a.action_type === "reminder";
     if (activeFilter === "events") return a.action_type === "event";
     if (activeFilter === "lists") return a.action_type === "task" || a.action_type === "grocery_list";
@@ -377,6 +381,8 @@ export default function HomeScreen() {
                 detail={a.description || (a.location ? `Near ${a.location}` : undefined)}
                 date={formatDate(a.due_date)}
                 status={STATUS_MAP[a.status] || "pending"}
+                assigneeName={a.assignee_display_name}
+                isAssignedToMe={a.assignee_id === user?.id}
                 onConfirm={() => handleConfirm(a.id)}
                 onEdit={() => router.push(`/action/${a.id}`)}
                 onDismiss={() => handleDismiss(a.id)}
@@ -412,6 +418,8 @@ export default function HomeScreen() {
                     detail={a.description}
                     date={formatDate(a.due_date)}
                     status={STATUS_MAP[a.status] || "pending"}
+                    assigneeName={a.assignee_display_name}
+                    isAssignedToMe={a.assignee_id === user?.id}
                     onConfirm={() => handleConfirm(a.id)}
                     onEdit={() => router.push(`/action/${a.id}`)}
                     onDismiss={() => handleDismiss(a.id)}
@@ -430,6 +438,8 @@ export default function HomeScreen() {
                     detail={a.description}
                     date={formatDate(a.due_date)}
                     status={STATUS_MAP[a.status] || "pending"}
+                    assigneeName={a.assignee_display_name}
+                    isAssignedToMe={a.assignee_id === user?.id}
                     onConfirm={() => handleConfirm(a.id)}
                     onEdit={() => router.push(`/action/${a.id}`)}
                     onDismiss={() => handleDismiss(a.id)}
