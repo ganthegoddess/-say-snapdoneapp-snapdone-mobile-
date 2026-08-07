@@ -47,7 +47,7 @@ export const HOUSEHOLDS = {
   JOIN: `${API_PREFIX}/households/join`,
   LEAVE: (id: string) => `${API_PREFIX}/households/${id}/leave`,
   /** Household feed — memories shared within the household */
-  FEED: (id: string) => `${API_PREFIX}/households/${id}/feed`,
+  FEED: (id: string) => `${API_PREFIX}/household/${id}/feed`,
 } as const;
 
 // Subscription endpoints

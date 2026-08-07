@@ -54,10 +54,11 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 // ──────────────────────────────────────────────
 
 const PIP_COLORS = {
-  primaryGlow: "#FCC870",       // Soft warm glow (was #FFF5D8 for dark bgs)
-  innerCore:  "#E89820",        // Rich warm gold anchor
-  outerGlow:  "#BFA0F0",        // Richer lavender
-  particles:  "#E8C898",        // Warm beige
+  primaryGlow: "#FFF5D8",       // Warm Ivory (business plan)
+  innerCore:  "#FFD98A",        // Soft Gold (business plan)
+  innerCoreBright: "#FFF0C0",   // Bright center highlight
+  outerGlow:  "#B79CFF",        // Lavender (business plan)
+  particles:  "#F9FAFF",        // Moonlight White
   particlesCool: "#D0B8FF",     // Soft lavender (cool accent)
   eyeFill:    "#FFE0B0",        // Bright warm tone for visibility
   rim:        "rgba(160, 120, 60, 0.18)",  // Definition line — non-negotiable

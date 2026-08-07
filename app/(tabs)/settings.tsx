@@ -1,13 +1,15 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from "react-native";
 import { router } from "expo-router";
 import { colors } from "../../src/constants/colors";
-import { useAuthStore } from "../../src/stores/authStore";
+import { useLocationStore } from "../../src/stores/locationStore";
 
 interface SettingsItem {
   icon: string;
   label: string;
   value: string;
   route?: string;
+  /** If toggleKey is set, renders a Switch instead of value */
+  toggleKey?: string;
 }
 
 const SETTINGS_SECTIONS: { title: string; items: SettingsItem[] }[] = [
@@ -22,6 +24,7 @@ const SETTINGS_SECTIONS: { title: string; items: SettingsItem[] }[] = [
     title: "Preferences",
     items: [
       { icon: "🔔", label: "Notifications", value: "On" },
+      { icon: "📍", label: "Location-based reminders", value: "", toggleKey: "location" },
       { icon: "📅", label: "Calendar Sync", value: "Off" },
     ],
   },
@@ -32,34 +35,17 @@ const SETTINGS_SECTIONS: { title: string; items: SettingsItem[] }[] = [
     ],
   },
   {
-    title: "AI & Capture",
+    title: "PIP & Capture",
     items: [
-      { icon: "🤖", label: "Auto-save confidence", value: "High (90%)" },
+      { icon: "💡", label: "Recognition confidence", value: "High (90%)" },
       { icon: "📸", label: "Preferred action types", value: "All" },
     ],
   },
 ];
 
 export default function SettingsScreen() {
-  const signOut = useAuthStore((state) => state.signOut);
-
-  const handleSignOut = () => {
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: async () => {
-            await signOut();
-            router.replace("/(auth)/sign-in");
-          },
-        },
-      ]
-    );
-  };
+  const locationRemindersEnabled = useLocationStore((s) => s.locationRemindersEnabled);
+  const setLocationRemindersEnabled = useLocationStore((s) => s.setLocationRemindersEnabled);
 
   return (
     <ScrollView style={styles.container}>
@@ -74,12 +60,22 @@ export default function SettingsScreen() {
                 key={i}
                 style={[styles.row, i > 0 && styles.rowBorder]}
                 onPress={() => item.route && router.push(item.route as any)}
+                disabled={!!item.toggleKey}
               >
                 <View style={styles.rowLeft}>
                   <Text style={styles.rowIcon}>{item.icon}</Text>
                   <Text style={styles.rowLabel}>{item.label}</Text>
                 </View>
-                <Text style={styles.rowValue}>{item.value}</Text>
+                {item.toggleKey === "location" ? (
+                  <Switch
+                    value={locationRemindersEnabled}
+                    onValueChange={setLocationRemindersEnabled}
+                    trackColor={{ false: colors.border, true: colors.brand.primary + "60" }}
+                    thumbColor={locationRemindersEnabled ? colors.brand.primary : colors.text.muted}
+                  />
+                ) : (
+                  <Text style={styles.rowValue}>{item.value}</Text>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -122,13 +118,6 @@ export default function SettingsScreen() {
       </View>
 
       <View style={{ height: 40 }} />
-
-      {/* Sign Out */}
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
-
-      <View style={{ height: 60 }} />
     </ScrollView>
   );
 }
@@ -161,16 +150,4 @@ const styles = StyleSheet.create({
   upgradeTitle: { fontSize: 17, fontWeight: "700", color: colors.brand.dark },
   upgradeText: { fontSize: 13, color: colors.brand.dark, marginTop: 2 },
   upgradeChevron: { fontSize: 22, color: colors.brand.primary, fontWeight: "600" },
-
-  // Sign out
-  signOutButton: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    marginHorizontal: 0,
-  },
-  signOutText: { fontSize: 16, fontWeight: "600", color: "#EF4444" },
 });

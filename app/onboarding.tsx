@@ -13,14 +13,14 @@ const PAGES = [
     subtitle: "Any receipt, flyer, or note. Just snap it — we'll read it for you.",
   },
   {
-    icon: "🤖",
-    title: "AI reads it instantly.",
-    subtitle: "Dates, amounts, names, items — extracted automatically by AI.",
+    icon: "💡",
+    title: "PIP reads it for you.",
+    subtitle: "Dates, amounts, names, items — understood automatically, like a trusted friend.",
   },
   {
     icon: "✅",
     title: "Actions appear. You relax.",
-    subtitle: "Calendar events, reminders, lists appear. Tap to confirm and you're done.",
+    subtitle: "Calendar events, reminders, lists just appear. Tap to save and you're done.",
   },
 ];
 

@@ -1,8 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { post } from "../services/api";
-import { PUSH } from "../constants/api";
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -10,8 +8,6 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
   }),
 });
 
@@ -84,26 +80,6 @@ export function useNotifications() {
     await Notifications.cancelAllScheduledNotificationsAsync();
   }, []);
 
-  /** Register device push token with the backend */
-  const registerPushToken = useCallback(async (): Promise<boolean> => {
-    try {
-      // Request permissions first
-      const permitted = await requestPermissions();
-      if (!permitted) return false;
-
-      // Get the Expo push token
-      const { data: expoToken } = await Notifications.getExpoPushTokenAsync();
-      if (!expoToken) return false;
-
-      // Register with backend
-      await post(PUSH.TOKEN, { token: expoToken });
-      return true;
-    } catch {
-      // Silently fail — push is a nice-to-have, not blocking
-      return false;
-    }
-  }, [requestPermissions]);
-
   /** Handle notification tap — returns the data payload */
   const handleNotificationTap = useCallback(
     (response: Notifications.NotificationResponse) => {
@@ -114,7 +90,6 @@ export function useNotifications() {
 
   return {
     requestPermissions,
-    registerPushToken,
     scheduleReminder,
     cancelReminder,
     cancelAll,

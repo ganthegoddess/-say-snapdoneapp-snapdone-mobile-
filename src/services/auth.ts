@@ -4,14 +4,13 @@ import { useAuthStore, type User } from "../stores/authStore";
 
 const USER_KEY = "snapdone_user";
 
-// In-memory storage fallback
-const memoryStore = new Map<string, string>();
+// Web-compatible storage
 async function setSecurely(key: string, value: string) {
   try {
     const { default: SecureStore } = await import("expo-secure-store");
     await SecureStore.setItemAsync(key, value);
   } catch {
-    memoryStore.set(key, value);
+    localStorage.setItem(key, value);
   }
 }
 
@@ -36,6 +35,18 @@ interface SignupParams {
 interface SigninParams {
   email: string;
   password: string;
+}
+
+interface SocialLoginParams {
+  provider: "google" | "apple";
+  id_token: string;
+  display_name?: string;
+  avatar_url?: string;
+}
+
+interface SocialAuthResponse extends AuthResponse {
+  is_new_user: boolean;
+  linked_account?: boolean;
 }
 
 /**
@@ -101,6 +112,41 @@ export async function signin(params: SigninParams): Promise<User> {
   } catch (error) {
     authStore.setIsSubmitting(false);
     const message = error instanceof Error ? error.message : "Sign in failed";
+    authStore.setError(message);
+    throw error;
+  }
+}
+
+/**
+ * Sign in / sign up using Google, Apple, or Samsung social login.
+ * Sends the provider's ID token to the backend for verification.
+ * Handles both new user creation and existing user authentication.
+ */
+export async function socialLogin(params: SocialLoginParams): Promise<{ user: User; isNewUser: boolean; linkedAccount?: boolean }> {
+  const authStore = useAuthStore.getState();
+  authStore.setIsSubmitting(true);
+  authStore.setError(null);
+
+  try {
+    const data = await post<SocialAuthResponse>(AUTH.SOCIAL, params, { noAuth: true });
+
+    const user: User = {
+      id: data.user.id,
+      email: data.user.email,
+      displayName: data.user.display_name,
+      avatarUrl: data.user.avatar_url,
+      isOnboarded: data.user.is_onboarded,
+    };
+
+    await authStore.setToken(data.token);
+    await setSecurely(USER_KEY, JSON.stringify(user));
+    authStore.setUser(user);
+    authStore.setIsSubmitting(false);
+
+    return { user, isNewUser: data.is_new_user, linkedAccount: data.linked_account };
+  } catch (error) {
+    authStore.setIsSubmitting(false);
+    const message = error instanceof Error ? error.message : "Social sign in failed";
     authStore.setError(message);
     throw error;
   }

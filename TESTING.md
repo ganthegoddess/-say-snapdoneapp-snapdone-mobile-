@@ -54,3 +54,51 @@ curl https://5f7a3e77abaf27c48a69cce1b874bb58.ctonew.app/api/v1/health
 ---
 
 **For production builds** (TestFlight, App Store, Google Play): see `README.md` for EAS Build instructions.
+
+---
+
+## EAS Webhook
+
+EAS can notify your API when builds complete or fail. This is already set up on the backend.
+
+### Webhook URL
+
+```
+https://5f7a3e77abaf27c48a69cce1b874bb58.ctonew.app/api/v1/webhooks/eas
+```
+
+### What it does
+
+| Event | Action |
+|-------|--------|
+| Build succeeded | Sends email notification to team inbox |
+| Build failed | Sends email notification with error details |
+| Submit completed | Logs the event to analytics |
+
+### Setup command
+
+Run this once from the `snapdone-mobile` directory:
+
+```bash
+eas webhook:create \
+  --event BUILD \
+  --url https://5f7a3e77abaf27c48a69cce1b874bb58.ctonew.app/api/v1/webhooks/eas \
+  --secret your-webhook-secret-here
+```
+
+Replace `your-webhook-secret-here` with a strong random string (you can generate one with `openssl rand -hex 32`). Then set the same secret as the `EAS_WEBHOOK_SECRET` environment variable on the server so it can verify the signature.
+
+### To also get submit events
+
+```bash
+eas webhook:create \
+  --event SUBMIT \
+  --url https://5f7a3e77abaf27c48a69cce1b874bb58.ctonew.app/api/v1/webhooks/eas \
+  --secret your-webhook-secret-here
+```
+
+### Verify the webhook is registered
+
+```bash
+eas webhook:list
+```

@@ -74,7 +74,11 @@ async function getUpcomingEventTitles(): Promise<string[]> {
 
 export default function HomeScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
-  const { data: actions, isLoading } = useActions();
+  const user = useAuthStore((s) => s.user);
+  const actionsFilters = activeFilter === "assigned" && user?.id
+    ? { assignee_id: user.id }
+    : undefined;
+  const { data: actions, isLoading } = useActions(actionsFilters);
   const completeAction = useCompleteAction();
   const deleteAction = useDeleteAction();
 
@@ -100,7 +104,6 @@ export default function HomeScreen() {
 
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const isCheckingRef = useRef(false);
-  const user = useAuthStore((s) => s.user);
 
   // Foreground: location check + memory recall
   useEffect(() => {

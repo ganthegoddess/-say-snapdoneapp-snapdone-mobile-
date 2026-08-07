@@ -6,9 +6,16 @@ export interface DraftCapture {
   source: CaptureSource | null;
   uri: string | null;
   thumbnailUri?: string;
-  inputType: "image" | "audio" | "pdf" | "text" | null;
+  inputType: "image" | "audio" | "pdf" | "text" | "photo+voice" | null;
   status: CaptureStatus;
   errorMessage?: string;
+  /** Auto-assigned household member from AI (if matched) */
+  assigneeId?: string;
+  assigneeDisplayName?: string;
+  /** Voice note attached to a photo (multimodal capture) */
+  voiceNoteUri?: string;
+  voiceNoteDurationSeconds?: number;
+  voiceNoteTranscription?: string;
 }
 
 export interface CaptureState {

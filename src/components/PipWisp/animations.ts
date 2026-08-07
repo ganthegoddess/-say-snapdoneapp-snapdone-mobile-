@@ -97,14 +97,14 @@ const STATE_CONFIGS: Record<PipState, StateConfig> = {
     opacity: 0.8,
     glowIntensity: 0.4,
     floatAmplitude: 3,
-    floatPeriod: 3500,
-    pulsePeriod: 2000,
+    floatPeriod: 6000,       // was 3500 — slowed: contemplative, not computational
+    pulsePeriod: 4000,       // was 2000 — slowed per owner feedback
     pulseAmplitude: 0.15,
     particleOpacity: 0.9,
     tailOpacity: 0.3,
     sparkleOpacity: 0,
-    transitionInMs: 300,
-    transitionOutMs: 400,
+    transitionInMs: 400,     // was 300 — slightly slower transition
+    transitionOutMs: 500,    // was 400
   },
   searching: {
     orbScale: 26 / 24,
@@ -242,6 +242,17 @@ function startIdleLoop(v: PipAnimationValues, config: StateConfig) {
     true, // reverse
   );
 
+  // Subtle horizontal drift — organic, ~7s cycle, ±2-3px
+  // Different period than Y so motion never loops identically
+  v.posX.value = withRepeat(
+    withSequence(
+      withTiming(3, { duration: 3500, easing: Easing.inOut(Easing.sin) }),
+      withTiming(-3, { duration: 3500, easing: Easing.inOut(Easing.sin) }),
+    ),
+    -1,
+    true,
+  );
+
   // Glow pulse
   v.pulseValue.value = withRepeat(
     withSequence(
@@ -355,14 +366,14 @@ export function animateToState(v: PipAnimationValues, state: PipState) {
 // ──────────────────────────────────────────────
 
 /**
- * Plays the signature animation:
- * 1. Particle floats from mic → PIP (arc path, 0-400ms)
- * 2. PIP catches it — eyes widen, orb brightens (400-550ms)
- * 3. Ripple of light through aura (550-700ms)
- * 4. PIP looks up, smile appears (700-900ms)
- * 5. "I've got it." voice/caption (900-1100ms)
- * 6. PIP drifts back to resting position (1100-1500ms)
- * Total: ~1.5 seconds
+ * Plays the signature animation — 9-phase storyboard:
+ * 1. Particle emerges (0-300ms)
+ * 2. PIP notices + tilts (300-600ms)
+ * 3. Particle drifts toward PIP (600-900ms)
+ * 4. Particle dissolves into PIP (900-1500ms)
+ * 5. PIP brightens (1500-2000ms)
+ * 6. Smile + settle back (2000-2600ms)
+ * Total: ~2.6 seconds (was 1.5s)
  */
 export function playSignatureAnimation(
   v: PipAnimationValues,
@@ -370,44 +381,47 @@ export function playSignatureAnimation(
 ) {
   const config = STATE_CONFIGS.remembered;
 
-  // Step 1-2: Catch — orb brightens and scales up
+  // Phase 1-3: Orb gently scales up as particle approaches
   v.orbOpacity.value = withSequence(
-    withTiming(0.85, { duration: 300, easing: Easing.out(Easing.sin) }),
-    withTiming(1.0,  { duration: 250, easing: Easing.in(Easing.sin) }),
+    withTiming(0.9,  { duration: 500, easing: Easing.out(Easing.sin) }),
+    withTiming(1.0,  { duration: 400, easing: Easing.in(Easing.sin) }),
   );
 
   v.orbScale.value = withSequence(
-    withTiming(27 / 24, { duration: 250, easing: Easing.out(Easing.sin) }),
-    withTiming(config.orbScale, { duration: 200, easing: Easing.out(Easing.sin) }),
+    withTiming(26 / 24, { duration: 600, easing: Easing.out(Easing.sin) }),
+    withTiming(config.orbScale, { duration: 300, easing: Easing.out(Easing.sin) }),
   );
 
+  // Phase 4-5: Glow builds and releases
   v.glowIntensity.value = withSequence(
-    withTiming(0.5,  { duration: 300, easing: Easing.out(Easing.sin) }),
-    withTiming(0.7,  { duration: 200, easing: Easing.out(Easing.sin) }),
-    withTiming(0.35, { duration: 600, easing: Easing.in(Easing.sin) }),
+    withTiming(0.45, { duration: 800, easing: Easing.out(Easing.sin) }),
+    withTiming(0.7,  { duration: 300, easing: Easing.out(Easing.sin) }),
+    withTiming(0.35, { duration: 900, easing: Easing.in(Easing.sin) }),
   );
 
-  // Step 3-4: Sparkle + particles settle
+  // Phase 6: Sparkle + particles settle
   v.sparkleOpacity.value = withSequence(
-    withTiming(0.8, { duration: 200, easing: Easing.out(Easing.sin) }),
-    withTiming(0,   { duration: 500, easing: Easing.in(Easing.sin) }),
+    withTiming(0,   { duration: 1500, easing: Easing.linear }),
+    withTiming(0.8, { duration: 300, easing: Easing.out(Easing.sin) }),
+    withTiming(0,   { duration: 800, easing: Easing.in(Easing.sin) }),
   );
 
   v.particleOpacity.value = withSequence(
-    withTiming(1.0, { duration: 200, easing: Easing.out(Easing.sin) }),
-    withTiming(0.6, { duration: 700, easing: Easing.in(Easing.sin) }),
+    withTiming(1.0,  { duration: 600, easing: Easing.out(Easing.sin) }),
+    withTiming(0.95, { duration: 600, easing: Easing.linear }),
+    withTiming(0.6,  { duration: 800, easing: Easing.in(Easing.sin) }),
   );
 
   v.tailOpacity.value = withSequence(
-    withTiming(0.4,  { duration: 250, easing: Easing.out(Easing.sin) }),
-    withTiming(0.15, { duration: 800, easing: Easing.in(Easing.sin) }),
+    withTiming(0.45, { duration: 400, easing: Easing.out(Easing.sin) }),
+    withTiming(0.2,  { duration: 1200, easing: Easing.in(Easing.sin) }),
   );
 
-  // Step 6: Return to idle after 1.5s
+  // Phase 7: Return to idle after full sequence (~2.6s)
   setTimeout(() => {
     animateToState(v, "idle");
     onComplete?.();
-  }, 1500);
+  }, 2600);
 }
 
 // ──────────────────────────────────────────────

@@ -6,12 +6,11 @@ import { Button } from "../../src/components/ui/Button";
 import { useCapture } from "../../src/hooks/useCapture";
 
 export default function ProcessingScreen() {
-  const { id, uri } = useLocalSearchParams<{ id: string; uri?: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const shimmerAnim = useRef(new Animated.Value(0)).current;
-  const [statusMessage, setStatusMessage] = useState("Reading your capture...");
+  const [statusMessage, setStatusMessage] = useState("Taking a look...");
   const [elapsed, setElapsed] = useState(0);
-  const [showRelief, setShowRelief] = useState(false);
-  const { error, processingResult, uploadPhoto, submitText, reset } = useCapture();
+  const { error, reset } = useCapture();
 
   useEffect(() => {
     // Animated shimmer
@@ -24,10 +23,10 @@ export default function ProcessingScreen() {
 
     // Rotate status messages
     const statuses = [
-      { msg: "Reading your capture...", time: 2000 },
-      { msg: "Extracting text and details...", time: 2000 },
-      { msg: "Detecting action type...", time: 2000 },
-      { msg: "Almost done...", time: 1500 },
+      { msg: "Taking a look...", time: 2000 },
+      { msg: "Reading what's there...", time: 2000 },
+      { msg: "I know what this is...", time: 2000 },
+      { msg: "Just a moment...", time: 1500 },
     ];
 
     let totalTime = 0;
@@ -36,10 +35,10 @@ export default function ProcessingScreen() {
       totalTime += s.time;
     });
 
-    // If this is a preview (new capture), upload the image
-    if (id === "preview" && uri) {
-      uploadPhoto(decodeURIComponent(uri));
-    }
+    // Back up timer — if we don't navigate within 8s, navigate to demo
+    const navigateTimer = setTimeout(() => {
+      router.replace("/action/demo");
+    }, 8000);
 
     // Elapsed time counter
     const interval = setInterval(() => {
@@ -47,16 +46,10 @@ export default function ProcessingScreen() {
     }, 1000);
 
     return () => {
+      clearTimeout(navigateTimer);
       clearInterval(interval);
     };
   }, []);
-
-  // When AI processing completes, show a warm relief message
-  useEffect(() => {
-    if (processingResult && processingResult.status === "completed") {
-      setShowRelief(true);
-    }
-  }, [processingResult]);
 
   const shimmerTranslate = shimmerAnim.interpolate({
     inputRange: [0, 1], outputRange: [-200, 400],
@@ -70,27 +63,15 @@ export default function ProcessingScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.spinnerContainer}>
-        <Text style={styles.spinnerIcon}>{showRelief ? "✨" : "🤖"}</Text>
+        <Text style={styles.spinnerIcon}>💡</Text>
         <View style={styles.spinnerRing} />
       </View>
 
-      {showRelief ? (
-        <>
-          <Text style={styles.reliefTitle}>Got it. I've got this one.</Text>
-          <Text style={styles.reliefText}>
-            I'll snap back when it's time.
-          </Text>
-        </>
-      ) : (
-        <>
-          <Text style={styles.title}>{statusMessage}</Text>
-          <Text style={styles.subtitle}>AI is analyzing your input</Text>
-        </>
-      )}
+      <Text style={styles.title}>{statusMessage}</Text>
+      <Text style={styles.subtitle}>PIP is taking care of this</Text>
 
-      {/* Processing skeleton — hide during relief message */}
-      {!showRelief && (
-        <View style={styles.skeleton}>
+      {/* Processing skeleton */}
+      <View style={styles.skeleton}>
         <View style={styles.skelHeader}>
           <View style={styles.skelBadge} />
           <View style={styles.skelDot} />
@@ -107,7 +88,6 @@ export default function ProcessingScreen() {
         </View>
         <Animated.View style={[styles.shimmer, { transform: [{ translateX: shimmerTranslate }] }]} />
       </View>
-      )}
 
       <Text style={styles.timer}>{formatTime(elapsed)}</Text>
 
@@ -128,8 +108,6 @@ const styles = StyleSheet.create({
   spinnerRing: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: colors.brand.light, borderTopColor: colors.brand.primary },
   title: { fontSize: 22, fontWeight: "700", color: colors.deep, marginBottom: 8, textAlign: "center" },
   subtitle: { fontSize: 15, color: colors.text.muted, textAlign: "center", marginBottom: 32, lineHeight: 22 },
-  reliefTitle: { fontSize: 24, fontWeight: "800", color: colors.accent.complete, marginBottom: 8, textAlign: "center" },
-  reliefText: { fontSize: 16, color: colors.text.primary, textAlign: "center", lineHeight: 24, marginBottom: 32 },
   skeleton: { width: "100%", backgroundColor: colors.white, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border, overflow: "hidden", position: "relative" },
   skelHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
   skelBadge: { width: 80, height: 16, backgroundColor: "#E2E8F0", borderRadius: 8 },

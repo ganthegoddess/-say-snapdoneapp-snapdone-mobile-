@@ -21,6 +21,7 @@ import {
   Image,
   Dimensions,
   Linking,
+  Alert,
 } from "react-native";
 import { Audio } from "expo-av";
 import { router } from "expo-router";
@@ -39,6 +40,7 @@ const IMAGE_MAX_WIDTH = SCREEN_WIDTH - CARD_PADDING * 2 - spacing.md * 2;
 const INPUT_TYPE_CONFIG: Record<string, { icon: string; label: string; badgeVariant: "primary" | "success" | "warning" | "error" | "neutral" }> = {
   image: { icon: "🖼️", label: "Photo", badgeVariant: "primary" },
   voice: { icon: "🎙️", label: "Voice Note", badgeVariant: "warning" },
+  "photo+voice": { icon: "🎤🖼️", label: "Photo + Voice", badgeVariant: "primary" },
   pdf: { icon: "📄", label: "Document", badgeVariant: "error" },
   text: { icon: "📝", label: "Text", badgeVariant: "neutral" },
   email: { icon: "✉️", label: "Email", badgeVariant: "success" },
@@ -86,8 +88,19 @@ function VoiceCapture({ url, durationSeconds }: { url: string; durationSeconds?:
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [totalDuration, setTotalDuration] = useState(durationSeconds ? durationSeconds * 1000 : 0);
+  const [playbackError, setPlaybackError] = useState(false);
+
+  // Cleanup sound on unmount
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync().catch(() => {});
+      }
+    };
+  }, [sound]);
 
   const togglePlayback = useCallback(async () => {
+    if (playbackError) return;
     if (isPlaying && sound) {
       await sound.pauseAsync();
       setIsPlaying(false);
@@ -117,9 +130,9 @@ function VoiceCapture({ url, durationSeconds }: { url: string; durationSeconds?:
         setIsPlaying(true);
       }
     } catch {
-      // Audio playback failed silently
+      setPlaybackError(true);
     }
-  }, [isPlaying, sound, url, totalDuration]);
+  }, [isPlaying, sound, url, totalDuration, playbackError]);
 
   const progress = totalDuration > 0 ? position / totalDuration : 0;
   const formatTime = (ms: number) => {
@@ -131,23 +144,29 @@ function VoiceCapture({ url, durationSeconds }: { url: string; durationSeconds?:
 
   return (
     <View style={styles.voiceCapture}>
-      <TouchableOpacity onPress={togglePlayback} style={styles.voicePlayBtn}>
-        <Text style={styles.voicePlayIcon}>{isPlaying ? "⏸️" : "▶️"}</Text>
+      <TouchableOpacity onPress={togglePlayback} style={styles.voicePlayBtn} disabled={playbackError}>
+        <Text style={styles.voicePlayIcon}>
+          {playbackError ? "⚠️" : isPlaying ? "⏸️" : "▶️"}
+        </Text>
       </TouchableOpacity>
       <View style={styles.voiceInfo}>
-        {/* Waveform bars (decorative) */}
-        <View style={styles.voiceBars}>
-          {[1, 2, 3, 4, 5, 3, 4, 2, 3, 1, 2, 3].map((h, i) => (
-            <View
-              key={i}
-              style={[
-                styles.voiceBar,
-                {
-                  height: 6 + h * 3,
-                  opacity: progress > i / 12 ? 0.8 : 0.3,
-                },
-              ]}
-            />
+        {playbackError ? (
+          <Text style={styles.voiceErrorText}>Could not play audio</Text>
+        ) : (
+          <>
+            {/* Waveform bars (decorative) */}
+            <View style={styles.voiceBars}>
+              {[1, 2, 3, 4, 5, 3, 4, 2, 3, 1, 2, 3].map((h, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.voiceBar,
+                    {
+                      height: 6 + h * 3,
+                      opacity: progress > i / 12 ? 0.8 : 0.3,
+                    },
+                  ]}
+                />
           ))}
         </View>
         {/* Progress bar */}
@@ -157,6 +176,8 @@ function VoiceCapture({ url, durationSeconds }: { url: string; durationSeconds?:
         <Text style={styles.voiceTime}>
           {isPlaying ? formatTime(position) : formatTime(totalDuration)}
         </Text>
+          </>
+        )}
       </View>
     </View>
   );
@@ -166,7 +187,9 @@ function PdfCapture({ url, filename }: { url: string; filename?: string }) {
   return (
     <TouchableOpacity
       style={styles.docCapture}
-      onPress={() => Linking.openURL(url)}
+      onPress={() => Linking.openURL(url).catch(() => {
+        Alert.alert("Could not open document", "The file may have been moved or deleted.");
+      })}
     >
       <Text style={styles.docIcon}>📄</Text>
       <View style={styles.docInfo}>
@@ -205,6 +228,126 @@ function EmailCapture({ text, filename }: { text: string; filename?: string }) {
   );
 }
 
+/**
+ * DualHeroCapture — renders a photo+voice multimodal memory.
+ * Photo is the visual hero, voice note is shown below with playback.
+ */
+function DualHeroCapture({
+  photoUrl,
+  audioUrl,
+  durationSeconds,
+  transcription,
+}: {
+  photoUrl: string;
+  audioUrl?: string;
+  durationSeconds?: number;
+  transcription?: string;
+}) {
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [hasPhotoError, setHasPhotoError] = useState(false);
+  const [playbackError, setPlaybackError] = useState(false);
+
+  // Cleanup sound on unmount
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync().catch(() => {});
+      }
+    };
+  }, [sound]);
+
+  const togglePlayback = useCallback(async () => {
+    if (!audioUrl || playbackError) return;
+    if (isPlaying && sound) {
+      await sound.pauseAsync();
+      setIsPlaying(false);
+      return;
+    }
+    try {
+      if (!sound) {
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: audioUrl },
+          { shouldPlay: true },
+          (status) => {
+            if (status.isLoaded && status.didJustFinish) {
+              setIsPlaying(false);
+            }
+          }
+        );
+        setSound(newSound);
+        setIsPlaying(true);
+      } else {
+        await sound.playAsync();
+        setIsPlaying(true);
+      }
+    } catch {
+      setPlaybackError(true);
+    }
+  }, [isPlaying, sound, audioUrl, playbackError]);
+
+  const formatDuration = (s?: number) => {
+    if (!s) return "0:00";
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <View style={styles.dualHeroContainer}>
+      {/* Visual hero — full-width photo */}
+      {hasPhotoError ? (
+        <View style={styles.fallbackCapture}>
+          <Text style={styles.fallbackIcon}>🖼️</Text>
+          <Text style={styles.fallbackText}>Photo unavailable</Text>
+        </View>
+      ) : (
+        <Image
+          source={{ uri: photoUrl }}
+          style={styles.imageCapture}
+          resizeMode="cover"
+          onError={() => setHasPhotoError(true)}
+        />
+      )}
+
+      {/* Audio hero — playable bar below photo */}
+      {audioUrl && (
+        <View style={styles.audioHeroSection}>
+          <TouchableOpacity
+            onPress={togglePlayback}
+            style={styles.audioPlayBtn}
+            accessibilityLabel={isPlaying ? "Pause voice note" : "Play voice note"}
+            disabled={playbackError}
+          >
+            <Text style={styles.audioPlayIcon}>
+              {playbackError ? "⚠️" : isPlaying ? "⏸️" : "▶️"}
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.audioHeroInfo}>
+            <Text style={styles.audioHeroLabel}>
+              Voice note · {formatDuration(durationSeconds)}
+            </Text>
+            {/* Mini progress bar */}
+            <View style={styles.audioProgressBg}>
+              <View
+                style={[
+                  styles.audioProgressFill,
+                  { width: "100%" },
+                ]}
+              />
+            </View>
+            {transcription ? (
+              <Text style={styles.audioTranscription} numberOfLines={3}>
+                {transcription}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ── Main card ──
 
 interface SnapBackCardProps {
@@ -238,6 +381,15 @@ export function SnapBackCard({ memory, recallReason, onArchive }: SnapBackCardPr
             durationSeconds={original.duration_seconds}
           />
         );
+      case "photo+voice":
+        return (
+          <DualHeroCapture
+            photoUrl={original.file_url}
+            audioUrl={original.audio_url}
+            durationSeconds={original.duration_seconds}
+            transcription={original.transcription}
+          />
+        );
       case "pdf":
         return <PdfCapture url={original.file_url} filename={original.filename} />;
       case "email":
@@ -256,7 +408,7 @@ export function SnapBackCard({ memory, recallReason, onArchive }: SnapBackCardPr
   return (
     <View style={styles.card}>
       {/* PIP message bar */}
-      {pip?.message ? <PipMessageBar message={pip.message} /> : null}
+      {pip?.message != null && pip.message !== "" ? <PipMessageBar message={pip.message} /> : null}
 
       {/* Original capture — the hero */}
       <View style={styles.captureSection}>{renderCapture()}</View>
@@ -419,6 +571,11 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
     marginTop: 4,
   },
+  voiceErrorText: {
+    fontSize: 12,
+    color: colors.error,
+    fontStyle: "italic",
+  },
 
   // PDF / Document
   docCapture: {
@@ -534,5 +691,51 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.text.muted,
     fontWeight: "500",
+  },
+
+  // Dual-hero (photo+voice)
+  dualHeroContainer: {},
+  audioHeroSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  audioPlayBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.accent.warm + "20",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  audioPlayIcon: { fontSize: 18 },
+  audioHeroInfo: { flex: 1 },
+  audioHeroLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.deep,
+    marginBottom: 4,
+  },
+  audioProgressBg: {
+    height: 3,
+    backgroundColor: colors.border,
+    borderRadius: 1.5,
+    overflow: "hidden",
+    marginBottom: 6,
+  },
+  audioProgressFill: {
+    height: "100%",
+    backgroundColor: colors.accent.warm,
+    borderRadius: 1.5,
+  },
+  audioTranscription: {
+    fontSize: 12,
+    color: colors.text.muted,
+    fontStyle: "italic",
+    lineHeight: 16,
   },
 });

@@ -14,11 +14,23 @@ export function useCapture() {
   const [processingResult, setProcessingResult] = useState<captureService.CaptureResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  /** Upload a photo/image capture */
-  const uploadPhoto = useCallback(async (uri: string) => {
+  /** Upload a photo/image capture — optionally with voice note data for multimodal */
+  const uploadPhoto = useCallback(async (
+    uri: string,
+    voiceNote?: { uri: string; durationSeconds: number; transcription?: string },
+  ) => {
     setIsUploading(true);
     setError(null);
-    setDraft({ source: "camera", uri, inputType: "image", status: "processing" });
+    const inputType = voiceNote ? "photo+voice" : "image";
+    setDraft({
+      source: "camera",
+      uri,
+      inputType,
+      status: "processing",
+      voiceNoteUri: voiceNote?.uri,
+      voiceNoteDurationSeconds: voiceNote?.durationSeconds,
+      voiceNoteTranscription: voiceNote?.transcription,
+    });
 
     try {
       const result = await captureService.uploadCapture(uri, "image", (progress) => {
@@ -27,7 +39,7 @@ export function useCapture() {
 
       if (result.capture_id) {
         // Track capture event
-        trackEvent("memory_captured", { capture_type: "photo" });
+        trackEvent("memory_captured", { capture_type: voiceNote ? "photo+voice" : "photo" });
         // Start polling for result
         router.replace(`/processing/${result.capture_id}`);
         startPolling(result.capture_id);

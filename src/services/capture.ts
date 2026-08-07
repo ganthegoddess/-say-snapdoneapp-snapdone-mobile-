@@ -18,6 +18,8 @@ export interface CaptureResult {
     grocery_items?: { name: string; quantity?: string; category?: string }[];
     priority: string;
     status: string;
+    assignee_id?: string;
+    assignee_display_name?: string;
   };
   error_message?: string;
   created_at?: string;
