@@ -1,3 +1,7 @@
+// Global error handler MUST be imported FIRST — catches unhandled JS exceptions
+// before they become SIGABRT crashes in production builds.
+import "../src/lib/errorHandler";
+
 import { useEffect, useRef } from "react";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
