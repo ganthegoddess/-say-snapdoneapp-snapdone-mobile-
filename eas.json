@@ -27,8 +27,7 @@
     "production": {
       "channel": "production",
       "ios": {
-        "image": "latest",
-        "buildNumber": "5"
+        "image": "latest"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://snapdoneapp.com",
