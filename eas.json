@@ -25,8 +25,10 @@
     },
     "production": {
       "channel": "production",
+      "autoIncrement": true,
       "ios": {
-        "image": "latest"
+        "image": "latest",
+        "buildNumber": "3"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://snapdoneapp.com",
