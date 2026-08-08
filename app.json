@@ -53,8 +53,7 @@
           "color": "#0891B2"
         }
       ],
-      "expo-secure-store",
-      "expo-share-intent"
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
@@ -62,23 +61,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "build": {
-          "experimental": {
-            "ios": {
-              "appExtensions": [
-                {
-                  "targetName": "ShareExtension",
-                  "bundleIdentifier": "com.snapdoneapp.app.share-extension",
-                  "entitlements": {
-                    "com.apple.security.application-groups": [
-                      "group.com.snapdoneapp.app"
-                    ]
-                  }
-                }
-              ]
-            }
-          }
-        },
+        "build": {},
         "projectId": "63ac5dcc-bee8-4522-90d9-05587e01c866"
       }
     }
