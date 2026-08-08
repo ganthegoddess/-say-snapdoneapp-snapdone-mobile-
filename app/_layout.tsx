@@ -63,14 +63,18 @@ async function registerGeofenceFromPayload(payload: Record<string, unknown>) {
   }
 }
 
-// Configure notification presentation
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Configure notification presentation — safe init
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+} catch {
+  // Notifications unavailable — app continues gracefully
+}
 
 export default function RootLayout() {
   const hydrate = useAuthStore((state) => state.hydrate);
