@@ -29,6 +29,9 @@
       "ios": {
         "image": "latest"
       },
+      "android": {
+        "image": "ubuntu-22.04-jdk-17-ndk-r27b"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://snapdoneapp.com",
         "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_live_51TtgNH55NIUFSPQz8jTdmLkq7b8wUbSsuvQMIQ7pHveOejr4aoU58Hy9U6CaKT3G1UFuGkkIweSM2CPauJNMklhQ00gbv5natR"
