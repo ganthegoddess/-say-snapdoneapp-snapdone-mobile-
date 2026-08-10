@@ -62,6 +62,10 @@
             "kotlinVersion": "2.2.21",
             "compileSdkVersion": 35,
             "targetSdkVersion": 35
+          },
+          "ios": {
+            "deploymentTarget": "15.1",
+            "newArchEnabled": true
           }
         }
       ]
