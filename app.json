@@ -54,7 +54,17 @@
           "color": "#0891B2"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.2.21",
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
