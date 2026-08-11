@@ -12,7 +12,7 @@
  * AI title/summary provide supporting information.
  */
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -23,7 +23,7 @@ import {
   Linking,
   Alert,
 } from "react-native";
-import { Audio } from "expo-av";
+import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { router } from "expo-router";
 import { colors, typography, borderRadius, spacing } from "../../constants/colors";
 import { PipWisp } from "../PipWisp";
@@ -84,55 +84,52 @@ function ImageCapture({ url }: { url: string }) {
 }
 
 function VoiceCapture({ url, durationSeconds }: { url: string; durationSeconds?: number }) {
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [totalDuration, setTotalDuration] = useState(durationSeconds ? durationSeconds * 1000 : 0);
   const [playbackError, setPlaybackError] = useState(false);
+  const playerRef = useRef<AudioPlayer | null>(null);
 
-  // Cleanup sound on unmount
+  // Cleanup player on unmount
   useEffect(() => {
     return () => {
-      if (sound) {
-        sound.unloadAsync().catch(() => {});
-      }
+      playerRef.current?.remove();
+      playerRef.current = null;
     };
-  }, [sound]);
+  }, []);
 
   const togglePlayback = useCallback(async () => {
     if (playbackError) return;
-    if (isPlaying && sound) {
-      await sound.pauseAsync();
+    const player = playerRef.current;
+    if (isPlaying && player) {
+      player.pause();
       setIsPlaying(false);
       return;
     }
 
     try {
-      if (!sound) {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: url },
-          { shouldPlay: true },
-          (status) => {
-            if (status.isLoaded) {
-              setPosition(status.positionMillis);
-              setTotalDuration(status.durationMillis || totalDuration);
-              if (status.didJustFinish) {
-                setIsPlaying(false);
-                setPosition(0);
-              }
-            }
+      if (!player) {
+        const newPlayer = createAudioPlayer({ uri: url });
+        newPlayer.addListener("playbackStatusUpdate", (status) => {
+          // expo-audio reports currentTime/duration in seconds — convert to ms
+          setPosition(status.currentTime * 1000);
+          setTotalDuration(status.duration * 1000 || totalDuration);
+          if (status.didJustFinish) {
+            setIsPlaying(false);
+            setPosition(0);
           }
-        );
-        setSound(newSound);
+        });
+        playerRef.current = newPlayer;
+        newPlayer.play();
         setIsPlaying(true);
       } else {
-        await sound.playAsync();
+        player.play();
         setIsPlaying(true);
       }
     } catch {
       setPlaybackError(true);
     }
-  }, [isPlaying, sound, url, totalDuration, playbackError]);
+  }, [isPlaying, url, totalDuration, playbackError]);
 
   const progress = totalDuration > 0 ? position / totalDuration : 0;
   const formatTime = (ms: number) => {
@@ -243,48 +240,46 @@ function DualHeroCapture({
   durationSeconds?: number;
   transcription?: string;
 }) {
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasPhotoError, setHasPhotoError] = useState(false);
   const [playbackError, setPlaybackError] = useState(false);
+  const playerRef = useRef<AudioPlayer | null>(null);
 
-  // Cleanup sound on unmount
+  // Cleanup player on unmount
   useEffect(() => {
     return () => {
-      if (sound) {
-        sound.unloadAsync().catch(() => {});
-      }
+      playerRef.current?.remove();
+      playerRef.current = null;
     };
-  }, [sound]);
+  }, []);
 
   const togglePlayback = useCallback(async () => {
     if (!audioUrl || playbackError) return;
-    if (isPlaying && sound) {
-      await sound.pauseAsync();
+    const player = playerRef.current;
+    if (isPlaying && player) {
+      player.pause();
       setIsPlaying(false);
       return;
     }
     try {
-      if (!sound) {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: audioUrl },
-          { shouldPlay: true },
-          (status) => {
-            if (status.isLoaded && status.didJustFinish) {
-              setIsPlaying(false);
-            }
+      if (!player) {
+        const newPlayer = createAudioPlayer({ uri: audioUrl });
+        newPlayer.addListener("playbackStatusUpdate", (status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setIsPlaying(false);
           }
-        );
-        setSound(newSound);
+        });
+        playerRef.current = newPlayer;
+        newPlayer.play();
         setIsPlaying(true);
       } else {
-        await sound.playAsync();
+        player.play();
         setIsPlaying(true);
       }
     } catch {
       setPlaybackError(true);
     }
-  }, [isPlaying, sound, audioUrl, playbackError]);
+  }, [isPlaying, audioUrl, playbackError]);
 
   const formatDuration = (s?: number) => {
     if (!s) return "0:00";
