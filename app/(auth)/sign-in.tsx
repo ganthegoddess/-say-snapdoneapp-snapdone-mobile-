@@ -68,6 +68,9 @@ export default function SignInScreen() {
             if (error) setError(null);
           }}
         />
+        <Link href="/(auth)/forgot-password" style={styles.forgotLink}>
+          Forgot password?
+        </Link>
 
         {error && (
           <View style={styles.errorContainer}>
@@ -104,6 +107,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 16, color: "#64748B", marginBottom: 32 },
   form: { gap: 16 },
   label: { fontSize: 14, fontWeight: "600", color: "#1E293B" },
+  forgotLink: { fontSize: 14, color: "#0891B2", fontWeight: "600", alignSelf: "flex-end", marginTop: -6 },
   input: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 1, borderColor: "#E2E8F0", color: "#1E293B" },
   errorContainer: { backgroundColor: "#FEF2F2", borderRadius: 8, padding: 12, borderWidth: 1, borderColor: "#FECACA" },
   errorText: { color: "#EF4444", fontSize: 14, textAlign: "center" },
