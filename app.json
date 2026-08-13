@@ -8,11 +8,6 @@
     "icon": "./src/assets/images/icon.png",
     "scheme": "snapdone",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./src/assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0891B2"
-    },
     "ios": {
       "buildNumber": "6",
       "supportsTablet": true,
@@ -59,8 +54,8 @@
         "expo-build-properties",
         {
           "android": {
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
             "newArchEnabled": true
           },
           "ios": {
