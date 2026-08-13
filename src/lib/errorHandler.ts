@@ -15,7 +15,7 @@ import { Alert, Platform } from "react-native";
 let hasShownRecoveryAlert = false;
 
 // Store original handler so we can still log
-const originalHandler = (global as any).ErrorUtils?.getGlobalHandler?.();
+const originalHandler = (globalThis as any).ErrorUtils?.getGlobalHandler?.();
 
 function globalErrorHandler(error: Error, isFatal?: boolean) {
   // Always log the error
@@ -52,7 +52,7 @@ function globalErrorHandler(error: Error, isFatal?: boolean) {
 
 // Install the handler
 try {
-  (global as any).ErrorUtils?.setGlobalHandler?.(globalErrorHandler);
+  (globalThis as any).ErrorUtils?.setGlobalHandler?.(globalErrorHandler);
   console.log("SnapDone: Global error handler installed");
 } catch {
   console.warn("SnapDone: Could not install global error handler");

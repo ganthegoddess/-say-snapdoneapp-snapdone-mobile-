@@ -8,11 +8,6 @@
     "icon": "./src/assets/images/icon.png",
     "scheme": "snapdone",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./src/assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0891B2"
-    },
     "ios": {
       "buildNumber": "6",
       "supportsTablet": true,
