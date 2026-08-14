@@ -30,7 +30,8 @@
         "image": "latest"
       },
       "android": {
-        "image": "ubuntu-26.04-jdk-17-ndk-r27b-sdk-57"
+        "image": "ubuntu-26.04-jdk-17-ndk-r27b-sdk-57",
+        "buildType": "apk"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://snapdoneapp.com",
