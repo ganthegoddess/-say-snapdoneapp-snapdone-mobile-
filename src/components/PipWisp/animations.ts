@@ -12,6 +12,7 @@
  * - Signature "I've got it" animation as a dedicated sequence
  */
 
+import type { DimensionValue } from "react-native";
 import {
   useSharedValue,
   withTiming,
@@ -154,7 +155,10 @@ const STATE_CONFIGS: Record<PipState, StateConfig> = {
 //  Position constants (designer spec section 5)
 // ──────────────────────────────────────────────
 
-export const POSITION_MAP: Record<PipPosition, { top?: number; right?: number; left?: number }> = {
+export const POSITION_MAP: Record<
+  PipPosition,
+  { top?: DimensionValue; right?: DimensionValue; left?: DimensionValue; marginTop?: number; marginLeft?: number }
+> = {
   "top-right":      { top: 16, right: 16 },
   "center-top":     { top: 40, left: "50%", marginLeft: -22 },
   "beside-card":    { top: "50%", right: -30, marginTop: -22 },
@@ -436,7 +440,7 @@ export function usePipStyles(v: PipAnimationValues) {
         { translateX: v.posX },
       ],
       // Combine scale, opacity into a wrapper opacity-driven approach
-    } as const,
+    },
     orbGlowStyle: {
       opacity: v.glowIntensity,
       transform: [{ scale: v.orbScale }],

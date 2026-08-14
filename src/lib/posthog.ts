@@ -32,7 +32,7 @@ function getPostHog(): PostHogNative | null {
 /** Track a named SnapDone event with optional properties. Non-blocking. */
 export function trackEvent(eventName: string, properties?: Record<string, unknown>): void {
   try {
-    getPostHog()?.capture(eventName, properties ?? {});
+    getPostHog()?.capture(eventName, (properties ?? {}) as Parameters<PostHogNative["capture"]>[1]);
   } catch {
     // Never let analytics failures block the user experience
   }
@@ -41,7 +41,7 @@ export function trackEvent(eventName: string, properties?: Record<string, unknow
 /** Identify the current user (call after login/signup) */
 export function identifyUser(userId: string, traits?: Record<string, unknown>): void {
   try {
-    getPostHog()?.identify(userId, traits ?? {});
+    getPostHog()?.identify(userId, (traits ?? {}) as Parameters<PostHogNative["identify"]>[1]);
   } catch {
     // silent
   }

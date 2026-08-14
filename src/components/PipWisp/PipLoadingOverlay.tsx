@@ -65,7 +65,11 @@ export const PipLoadingOverlay: React.FC<PipLoadingOverlayProps> = ({
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 999,
     alignItems: "center",
     justifyContent: "center",
