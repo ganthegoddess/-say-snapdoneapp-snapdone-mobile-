@@ -71,6 +71,8 @@ async function registerGeofenceFromPayload(payload: Record<string, unknown>) {
 try {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldShowAlert: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
@@ -94,7 +96,9 @@ export default function RootLayout() {
     if (user?.id) {
       identifyUser(user.id, {
         email: user.email,
-        tier: user.subscriptionTier || "free",
+        // Backend auth response does not include a subscription tier yet.
+        // Tracked as "free" until the subscription API returns a real tier.
+        tier: "free",
       });
     }
   }, [user?.id]);
