@@ -170,3 +170,38 @@ export async function fetchProfile(): Promise<User> {
     throw new Error("Failed to fetch profile");
   }
 }
+
+/** Response from POST /auth/forgot-password. */
+export interface ForgotPasswordResponse {
+  message: string;
+  /**
+   * Beta-only field (PASSWORD_RESET_BETA_RETURN_TOKEN=1): present only when the
+   * account exists. Absent -> treat as "email sent" so the UI survives the flag
+   * being flipped off before public launch.
+   */
+  reset_token?: string;
+  reset_token_expires_at?: string;
+}
+
+/**
+ * Request a password reset link for an email.
+ * The server always returns the same generic message whether or not the account
+ * exists (Memory Covenant — never reveals registration). Does not touch the
+ * auth store; callers catch ApiError (status/code/message) to map UX copy.
+ */
+export async function forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+  return post<ForgotPasswordResponse>(AUTH.FORGOT_PASSWORD, { email }, { noAuth: true });
+}
+
+/** Response from POST /auth/reset-password. */
+export interface ResetPasswordResponse {
+  message: string;
+}
+
+/**
+ * Complete a password reset with a single-use token + new password.
+ * The backend invalidates the token and all other outstanding tokens on success.
+ */
+export async function resetPassword(token: string, password: string): Promise<ResetPasswordResponse> {
+  return post<ResetPasswordResponse>(AUTH.RESET_PASSWORD, { token, password }, { noAuth: true });
+}

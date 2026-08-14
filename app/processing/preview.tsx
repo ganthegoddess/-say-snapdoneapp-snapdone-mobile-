@@ -19,7 +19,13 @@ import {
   Alert,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import { Audio } from "expo-av";
+import {
+  useAudioRecorder,
+  RecordingPresets,
+  setAudioModeAsync,
+  requestRecordingPermissionsAsync,
+  type AudioRecorder,
+} from "expo-audio";
 import { colors, spacing, borderRadius } from "../../src/constants/colors";
 import { PipWisp } from "../../src/components/PipWisp";
 import { WaveformDots } from "../../src/components/ui/WaveformDots";
@@ -59,7 +65,8 @@ export default function PhotoPreviewScreen() {
   const [pipLineIdx, setPipLineIdx] = useState(0);
   const [audioPermissionGranted, setAudioPermissionGranted] = useState<boolean | null>(null);
 
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recordingRef = useRef<AudioRecorder | null>(recorder);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -93,9 +100,9 @@ export default function PhotoPreviewScreen() {
   // Clean up audio mode on unmount
   useEffect(() => {
     return () => {
-      Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: false,
+      setAudioModeAsync({
+        allowsRecording: false,
+        playsInSilentMode: false,
       }).catch(() => {});
     };
   }, []);
@@ -122,7 +129,7 @@ export default function PhotoPreviewScreen() {
   const startRecording = useCallback(async () => {
     try {
       // Request audio permissions
-      const { status } = await Audio.requestPermissionsAsync();
+      const { status } = await requestRecordingPermissionsAsync();
       if (status !== "granted") {
         setAudioPermissionGranted(false);
         Alert.alert(
@@ -134,16 +141,16 @@ export default function PhotoPreviewScreen() {
       }
       setAudioPermissionGranted(true);
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
+      const activeRecorder = recordingRef.current ?? recorder;
+      await activeRecorder.prepareToRecordAsync();
+      activeRecorder.record();
 
-      recordingRef.current = recording;
+      recordingRef.current = activeRecorder;
       setIsRecording(true);
       setPhase("recording");
       setRecordingElapsed(0);
@@ -170,10 +177,11 @@ export default function PhotoPreviewScreen() {
     if (!recordingRef.current) return;
 
     try {
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      const status = (await recordingRef.current.getStatusAsync()) as Audio.RecordingStatus;
-      const durationSec = Math.round(status.durationMillis / 1000) || 0;
+      const activeRecorder = recordingRef.current;
+      await activeRecorder.stop();
+      const uri = activeRecorder.uri;
+      // expo-audio reports currentTime in seconds
+      const durationSec = Math.round(activeRecorder.currentTime) || 0;
 
       recordingRef.current = null;
       setIsRecording(false);
@@ -307,7 +315,7 @@ export default function PhotoPreviewScreen() {
             onPress={() => {
               // Discard recording — user explicitly backed out, skip duration check
               if (recordingRef.current) {
-                recordingRef.current.stopAndUnloadAsync().catch(() => {});
+                recordingRef.current.stop().catch(() => {});
                 recordingRef.current = null;
               }
               setIsRecording(false);

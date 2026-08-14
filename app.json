@@ -8,12 +8,8 @@
     "icon": "./src/assets/images/icon.png",
     "scheme": "snapdone",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./src/assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0891B2"
-    },
     "ios": {
+      "buildNumber": "6",
       "supportsTablet": true,
       "bundleIdentifier": "com.snapdoneapp.app",
       "infoPlist": {
@@ -44,8 +40,16 @@
       "expo-router",
       "expo-camera",
       "expo-image-picker",
-      "expo-av",
+      "expo-audio",
       "expo-calendar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SnapDone uses your location to bring back the right memory at the right place — like a grocery list when you're near the store.",
+          "locationAlwaysAndWhenInUsePermission": "SnapDone uses your location in the background to quietly remind you at the right place — like a grocery list when you're near the store.",
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
       [
         "expo-notifications",
         {
@@ -53,7 +57,21 @@
           "color": "#0891B2"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "newArchEnabled": true
+          },
+          "ios": {
+            "deploymentTarget": "17.0",
+            "newArchEnabled": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

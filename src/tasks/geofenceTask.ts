@@ -28,7 +28,8 @@ interface GeofenceEvent {
  * Called by the OS when the user crosses a registered geofence boundary.
  * On enter: fires a local notification and cleans up the geofence.
  */
-TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }) => {
+try {
+  TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }) => {
   if (error) {
     console.warn("Geofence task error:", error.message);
     return;
@@ -75,5 +76,8 @@ TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }) => {
     });
   } catch {
     // Best-effort — backend ping is fire-and-forget
-  }
-});
+    }
+  });
+} catch {
+  // TaskManager not available — geofencing disabled gracefully
+}

@@ -16,6 +16,8 @@ export const AUTH = {
   LOGIN: `${API_PREFIX}/auth/login`,
   REFRESH: `${API_PREFIX}/auth/refresh`,
   SOCIAL: `${API_PREFIX}/auth/social`,
+  FORGOT_PASSWORD: `${API_PREFIX}/auth/forgot-password`,
+  RESET_PASSWORD: `${API_PREFIX}/auth/reset-password`,
 } as const;
 
 // Capture endpoints

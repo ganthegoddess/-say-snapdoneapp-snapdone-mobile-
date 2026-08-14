@@ -1,3 +1,7 @@
+// Global error handler MUST be imported FIRST — catches unhandled JS exceptions
+// before they become SIGABRT crashes in production builds.
+import "../src/lib/errorHandler";
+
 import { useEffect, useRef } from "react";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -63,16 +67,20 @@ async function registerGeofenceFromPayload(payload: Record<string, unknown>) {
   }
 }
 
-// Configure notification presentation
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Configure notification presentation — safe init
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+} catch {
+  // Notifications unavailable — app continues gracefully
+}
 
 export default function RootLayout() {
   const hydrate = useAuthStore((state) => state.hydrate);

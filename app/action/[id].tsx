@@ -8,7 +8,7 @@ import { useNotifications } from "../../src/hooks/useNotifications";
 import { useCalendar } from "../../src/hooks/useCalendar";
 import { useCaptureStore } from "../../src/stores/captureStore";
 import { useAuthStore } from "../../src/stores/authStore";
-import { useHouseholdDetail } from "../../src/hooks/useHouseholds";
+import { useHousehold } from "../../src/hooks/useHouseholds";
 import { MemberPicker } from "../../src/components/household/MemberPicker";
 import { shareAction, unshareAction } from "../../src/services/household";
 import type { PickerMember } from "../../src/components/household/MemberPicker";
@@ -45,7 +45,7 @@ export default function ActionDetailScreen() {
 
   // Household sharing state
   const activeHouseholdId = action?.household_id || undefined;
-  const { data: householdDetail, isLoading: isLoadingHousehold } = useHouseholdDetail(
+  const { data: householdDetail, isLoading: isLoadingHousehold } = useHousehold(
     activeHouseholdId || ""
   );
 
