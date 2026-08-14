@@ -8,7 +8,7 @@ import { useNotifications } from "../../src/hooks/useNotifications";
 import { useCalendar } from "../../src/hooks/useCalendar";
 import { useCaptureStore } from "../../src/stores/captureStore";
 import { useAuthStore } from "../../src/stores/authStore";
-import { useHouseholdDetail } from "../../src/hooks/useHousehold";
+import { useHouseholdDetail } from "../../src/hooks/useHouseholds";
 import { MemberPicker } from "../../src/components/household/MemberPicker";
 import { shareAction, unshareAction } from "../../src/services/household";
 import type { PickerMember } from "../../src/components/household/MemberPicker";
@@ -254,7 +254,7 @@ export default function ActionDetailScreen() {
             <TouchableOpacity
               key={c.key}
               style={[styles.chip, category === c.key && { backgroundColor: c.color + "20", borderColor: c.color }]}
-              onPress={() => setCategory(c.key)}
+              onPress={() => setCategory(c.key as "event" | "reminder" | "grocery_list" | "bill" | "task")}
             >
               <Text style={styles.chipIcon}>{c.icon}</Text>
               <Text style={[styles.chipLabel, category === c.key && { color: c.color }]}>{c.label}</Text>
@@ -281,7 +281,7 @@ export default function ActionDetailScreen() {
             <TouchableOpacity
               key={p.key}
               style={[styles.priorityChip, priority === p.key && { backgroundColor: p.color + "20", borderColor: p.color }]}
-              onPress={() => setPriority(p.key)}
+              onPress={() => setPriority(p.key as "low" | "medium" | "high")}
             >
               <Text style={[styles.priorityText, priority === p.key && { color: p.color, fontWeight: "700" }]}>{p.label}</Text>
             </TouchableOpacity>
