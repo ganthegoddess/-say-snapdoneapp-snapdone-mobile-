@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from
 import { router } from "expo-router";
 import { colors } from "../src/constants/colors";
 import { Button } from "../src/components/ui/Button";
+import { useAuthStore } from "../src/stores/authStore";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -27,6 +28,10 @@ const PAGES = [
 export default function OnboardingScreen() {
   const [currentPage, setCurrentPage] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  // A fresh sign-up already has a token — onboarding must exit into the app,
+  // not back to the sign-up screen (was a dead-end loop).
+  const token = useAuthStore((state) => state.token);
+  const exitRoute = token ? "/(tabs)" : "/(auth)/sign-up";
 
   const handleScroll = (event: any) => {
     const page = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
@@ -37,12 +42,12 @@ export default function OnboardingScreen() {
     if (currentPage < PAGES.length - 1) {
       scrollRef.current?.scrollTo({ x: (currentPage + 1) * SCREEN_WIDTH, animated: true });
     } else {
-      router.replace("/(auth)/sign-up");
+      router.replace(exitRoute);
     }
   };
 
   const handleSkip = () => {
-    router.replace("/(auth)/sign-up");
+    router.replace(exitRoute);
   };
 
   return (

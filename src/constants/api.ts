@@ -1,7 +1,11 @@
 // SnapDone API & environment constants
 
-// The current site URL - backend API will be served from the same origin
-export const API_BASE_URL = "https://5f7a3e77abaf27c48a69cce1b874bb58.ctonew.app";
+// The API base URL is env-driven: EAS builds set EXPO_PUBLIC_API_URL
+// (production → https://snapdoneapp.com, see eas.json), local dev can
+// override via .env. Production is the default fallback so a build can
+// never silently point at a dev tunnel.
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? "https://snapdoneapp.com";
 
 export const API_PREFIX = "/api/v1";
 
@@ -24,6 +28,8 @@ export const AUTH = {
 export const CAPTURE = {
   UPLOAD: `${API_PREFIX}/capture`,
   TEXT: `${API_PREFIX}/capture/text`,
+  /** Voice note upload — multipart with an `audio` file field (Whisper → AI pipeline) */
+  VOICE: `${API_PREFIX}/capture/voice`,
   RESULT: (id: string) => `${API_PREFIX}/capture/${id}/result`,
 } as const;
 

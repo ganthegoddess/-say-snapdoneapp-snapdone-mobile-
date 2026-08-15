@@ -15,6 +15,7 @@ import type { PickerMember } from "../../src/components/household/MemberPicker";
 import { locationContextFromText, getLocationBadgeIcon } from "../../src/utils/locationContext";
 import { useUpdateMemoryState } from "../../src/hooks/useMemories";
 import type { MemoryState } from "../../src/services/memories";
+import { FEATURES } from "../../src/constants/features";
 import { Skeleton } from "../../src/components/ui/Skeleton";
 
 const CATEGORIES = [
@@ -359,26 +360,30 @@ export default function ActionDetailScreen() {
 
         <View style={styles.divider} />
 
-        {/* Memory State */}
-        <Text style={styles.sectionLabel}>Memory State</Text>
-        <View style={styles.memoryChips}>
-          {([
-            { key: "active" as MemoryState, icon: "🔔", label: "SnapBack will remind me" },
-            { key: "dormant" as MemoryState, icon: "💭", label: "PIP keeps an eye on this" },
-            { key: "archived" as MemoryState, icon: "📦", label: "Don't surface this" },
-          ]).map((s) => (
-            <TouchableOpacity
-              key={s.key}
-              style={[styles.memoryChip, memoryState === s.key && styles.memoryChipActive]}
-              onPress={() => handleMemoryStateChange(s.key)}
-            >
-              <Text style={styles.memoryChipIcon}>{s.icon}</Text>
-              <Text style={[styles.memoryChipLabel, memoryState === s.key && styles.memoryChipLabelActive]}>
-                {s.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Memory State — Beta Freeze: hidden pre-beta (FEATURES.MEMORY_STATE) */}
+        {FEATURES.MEMORY_STATE && (
+          <>
+            <Text style={styles.sectionLabel}>Memory State</Text>
+            <View style={styles.memoryChips}>
+              {([
+                { key: "active" as MemoryState, icon: "🔔", label: "SnapBack will remind me" },
+                { key: "dormant" as MemoryState, icon: "💭", label: "PIP keeps an eye on this" },
+                { key: "archived" as MemoryState, icon: "📦", label: "Don't surface this" },
+              ]).map((s) => (
+                <TouchableOpacity
+                  key={s.key}
+                  style={[styles.memoryChip, memoryState === s.key && styles.memoryChipActive]}
+                  onPress={() => handleMemoryStateChange(s.key)}
+                >
+                  <Text style={styles.memoryChipIcon}>{s.icon}</Text>
+                  <Text style={[styles.memoryChipLabel, memoryState === s.key && styles.memoryChipLabelActive]}>
+                    {s.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
       </View>
 
       <View style={styles.actions}>
