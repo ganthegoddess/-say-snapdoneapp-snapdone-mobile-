@@ -15,6 +15,7 @@ import { useLocationContext } from "../../src/hooks/useLocationContext";
 import { useLocationStore } from "../../src/stores/locationStore";
 import { useRecallMemories, useUpdateMemoryState } from "../../src/hooks/useMemories";
 import { useAuthStore } from "../../src/stores/authStore";
+import { FEATURES } from "../../src/constants/features";
 import { getLocationBadgeIcon } from "../../src/utils/locationContext";
 import { trackEvent } from "../../src/lib/posthog";
 import type { ActionItem } from "../../src/services/actions";
@@ -276,9 +277,11 @@ export default function HomeScreen() {
           <Text style={styles.headline}>What's on your mind?</Text>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={() => router.push("/ask-pip")} style={styles.pipBtn}>
-            <Text style={styles.pipBtnIcon}>💡</Text>
-          </TouchableOpacity>
+          {FEATURES.ASK_PIP && (
+            <TouchableOpacity onPress={() => router.push("/ask-pip")} style={styles.pipBtn}>
+              <Text style={styles.pipBtnIcon}>💡</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={() => router.push("/(tabs)/settings")} style={styles.settingsBtn}>
             <Text style={styles.settingsIcon}>⚙️</Text>
           </TouchableOpacity>

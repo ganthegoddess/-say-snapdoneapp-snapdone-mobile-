@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from "react-native";
 import { router } from "expo-router";
 import { colors } from "../../src/constants/colors";
 import { useLocationStore } from "../../src/stores/locationStore";
+import { useAuthStore } from "../../src/stores/authStore";
 
 interface SettingsItem {
   icon: string;
@@ -46,6 +47,21 @@ const SETTINGS_SECTIONS: { title: string; items: SettingsItem[] }[] = [
 export default function SettingsScreen() {
   const locationRemindersEnabled = useLocationStore((s) => s.locationRemindersEnabled);
   const setLocationRemindersEnabled = useLocationStore((s) => s.setLocationRemindersEnabled);
+  const signOut = useAuthStore((s) => s.signOut);
+
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await signOut();
+          router.replace("/(auth)/sign-in");
+        },
+      },
+    ]);
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -117,6 +133,13 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* Sign out */}
+      <View style={styles.section}>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={{ height: 40 }} />
     </ScrollView>
   );
@@ -150,4 +173,15 @@ const styles = StyleSheet.create({
   upgradeTitle: { fontSize: 17, fontWeight: "700", color: colors.brand.dark },
   upgradeText: { fontSize: 13, color: colors.brand.dark, marginTop: 2 },
   upgradeChevron: { fontSize: 22, color: colors.brand.primary, fontWeight: "600" },
+
+  // Sign out
+  signOutButton: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  signOutText: { fontSize: 16, fontWeight: "700", color: colors.error },
 });

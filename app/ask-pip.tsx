@@ -19,13 +19,14 @@ import {
   Platform,
   Animated,
 } from "react-native";
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { colors } from "../src/constants/colors";
 import { PipWisp } from "../src/components/PipWisp";
 import { SnapBackCard } from "../src/components/memories/SnapBackCard";
 import { WaveformDots } from "../src/components/ui/WaveformDots";
 import { askPip } from "../src/services/memories";
 import { trackEvent } from "../src/lib/posthog";
+import { FEATURES } from "../src/constants/features";
 import type { AskPipResponse } from "../src/types";
 import type { PipState } from "../src/components/PipWisp";
 
@@ -47,6 +48,13 @@ const PIP_MESSAGES: Record<ScreenPhase, string | ((n?: number, topic?: string) =
 };
 
 export default function AskPipScreen() {
+  // Beta Freeze: Ask PIP (POST /memories/ask) is disabled pre-beta. Code is
+  // kept for the gated phase; while the flag is false the route is unreachable
+  // (button hidden on Home) and direct navigation is redirected away.
+  if (!FEATURES.ASK_PIP) {
+    return <Redirect href="/(tabs)" />;
+  }
+
   const [query, setQuery] = useState("");
   const [phase, setPhase] = useState<ScreenPhase>("idle");
   const [response, setResponse] = useState<AskPipResponse | null>(null);

@@ -48,6 +48,35 @@ export async function uploadCapture(
 }
 
 /**
+ * Upload a voice note (multimodal photo+voice capture).
+ *
+ * The backend exposes a dedicated voice endpoint (POST /api/v1/capture/voice)
+ * that accepts multipart/form-data with an `audio` file field, transcribes it
+ * via Whisper, and runs it through the AI action pipeline. Returns its own
+ * capture_id — poll with pollCaptureResult(id) to get the resulting action.
+ */
+export async function uploadVoiceCapture(
+  fileUri: string,
+  durationSeconds?: number
+): Promise<CaptureResult> {
+  const formData = new FormData();
+  const filename = fileUri.split("/").pop() || "voice.m4a";
+  // expo-audio HIGH_QUALITY preset records .m4a (AAC)
+  const mimeType = "audio/m4a";
+
+  formData.append("audio", {
+    uri: fileUri,
+    name: filename,
+    type: mimeType,
+  } as any);
+  if (durationSeconds !== undefined) {
+    formData.append("duration_seconds", String(durationSeconds));
+  }
+
+  return uploadFile<CaptureResult>(CAPTURE.VOICE, formData);
+}
+
+/**
  * Submit text directly for processing (no file upload).
  */
 export async function submitText(text: string): Promise<CaptureResult> {
