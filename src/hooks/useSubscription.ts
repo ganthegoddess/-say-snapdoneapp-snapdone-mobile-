@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as subscriptionService from "../services/subscription";
+import type { PlanType } from "../services/subscription";
 
 export function useSubscription() {
   return useQuery({
@@ -17,7 +18,7 @@ export function useSubscription() {
 
 export function useCreateCheckout() {
   return useMutation({
-    mutationFn: (planType: "monthly" | "annual" | "household") =>
+    mutationFn: (planType: PlanType) =>
       subscriptionService.createCheckoutSession(planType),
   });
 }

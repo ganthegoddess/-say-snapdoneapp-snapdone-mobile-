@@ -108,7 +108,7 @@ export default function SettingsScreen() {
           <Text style={styles.upgradeIcon}>⭐</Text>
           <View style={styles.upgradeInfo}>
             <Text style={styles.upgradeTitle}>Free Plan</Text>
-            <Text style={styles.upgradeText}>10 captures/month, no household sharing</Text>
+            <Text style={styles.upgradeText}>30 memories/month, no household sharing</Text>
           </View>
           <Text style={styles.upgradeChevron}>›</Text>
         </TouchableOpacity>
