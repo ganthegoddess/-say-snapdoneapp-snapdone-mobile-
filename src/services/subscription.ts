@@ -1,8 +1,22 @@
 import { get, post } from "./api";
 import { SUBSCRIPTIONS } from "../constants/api";
 
+/**
+ * Canonical Stripe plan keys — mirrors the backend create-checkout prices map
+ * (site/src/api-handler.ts), which is the single source of truth. The mobile
+ * app sends exactly these; any other value silently falls back to
+ * premium_monthly on the backend, so never invent keys here.
+ */
+export type PlanType =
+  | "premium_monthly"
+  | "premium_annual"
+  | "household_monthly"
+  | "household_annual"
+  | "household_plus_monthly"
+  | "household_plus_annual";
+
 export interface SubscriptionStatus {
-  plan_type: "monthly" | "annual" | "household" | null;
+  plan_type: PlanType | null;
   status: "active" | "canceled" | "past_due" | "trialing" | "none";
   current_period_end?: string;
   cancel_at_period_end?: boolean;
@@ -21,9 +35,9 @@ export async function fetchSubscriptionStatus(): Promise<SubscriptionStatus> {
   return get<SubscriptionStatus>(SUBSCRIPTIONS.STATUS);
 }
 
-/** Create a Stripe Checkout session */
+/** Create a Stripe Checkout session for the given canonical plan key */
 export async function createCheckoutSession(
-  planType: "monthly" | "annual" | "household"
+  planType: PlanType
 ): Promise<CheckoutResponse> {
   return post<CheckoutResponse>(SUBSCRIPTIONS.CREATE_CHECKOUT, {
     plan_type: planType,

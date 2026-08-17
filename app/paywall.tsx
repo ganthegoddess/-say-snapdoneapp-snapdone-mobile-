@@ -2,14 +2,18 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { router } from "expo-router";
 import { useCreateCheckout } from "../src/hooks/useSubscription";
 import { trackEvent } from "../src/lib/posthog";
+import type { PlanType } from "../src/services/subscription";
 
 export default function PaywallScreen() {
   const checkout = useCreateCheckout();
 
-  const handleSubscribe = async (planType: "monthly" | "annual" | "household") => {
+  const handleSubscribe = async (planType: PlanType) => {
     try {
       const result = await checkout.mutateAsync(planType);
-      trackEvent("subscription_started", { to_tier: planType === "household" ? "household" : "premium" });
+      trackEvent("subscription_started", {
+        to_tier: planType.startsWith("household") ? "household" : "premium",
+        plan_type: planType,
+      });
       if (result.checkout_url) {
         await Linking.openURL(result.checkout_url);
       }
@@ -23,7 +27,7 @@ export default function PaywallScreen() {
       <View style={styles.header}>
         <Text style={styles.icon}>⭐</Text>
         <Text style={styles.title}>Upgrade to SnapDone</Text>
-        <Text style={styles.subtitle}>Unlimited captures, household sharing, and more</Text>
+        <Text style={styles.subtitle}>Unlimited memories, household sharing, and more</Text>
       </View>
 
       {checkout.isError && (
@@ -40,30 +44,30 @@ export default function PaywallScreen() {
           <Text style={styles.tierPrice}>$0</Text>
           <Text style={styles.tierPeriod}>forever</Text>
           <View style={styles.featureList}>
-            <Text style={styles.feature}>✓ 10 captures / month</Text>
-            <Text style={styles.feature}>✓ 5 active actions</Text>
+            <Text style={styles.feature}>✓ 30 memories / month</Text>
+            <Text style={styles.feature}>✓ Basic SnapBack</Text>
+            <Text style={styles.feature}>✗ Smart SnapBack</Text>
             <Text style={styles.feature}>✗ Household sharing</Text>
-            <Text style={styles.feature}>✗ Calendar sync</Text>
           </View>
         </View>
 
-        {/* Monthly tier */}
+        {/* Premium tier */}
         <View style={[styles.tierCard, styles.tierCardHighlighted]}>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>Most Popular</Text>
           </View>
-          <Text style={styles.tierName}>Monthly</Text>
-          <Text style={styles.tierPrice}>$7.99</Text>
+          <Text style={styles.tierName}>Premium</Text>
+          <Text style={styles.tierPrice}>$9.99</Text>
           <Text style={styles.tierPeriod}>per month</Text>
           <View style={styles.featureList}>
-            <Text style={styles.feature}>✓ Unlimited captures</Text>
-            <Text style={styles.feature}>✓ Unlimited actions</Text>
-            <Text style={styles.feature}>✓ Calendar sync</Text>
+            <Text style={styles.feature}>✓ Unlimited memories</Text>
+            <Text style={styles.feature}>✓ Smart SnapBack</Text>
+            <Text style={styles.feature}>✓ Contextual recall</Text>
             <Text style={styles.feature}>✗ Household sharing</Text>
           </View>
           <TouchableOpacity
             style={[styles.subscribeButton, checkout.isPending && styles.subscribeButtonDisabled]}
-            onPress={() => handleSubscribe("monthly")}
+            onPress={() => handleSubscribe("premium_monthly")}
             disabled={checkout.isPending}
           >
             {checkout.isPending ? (
@@ -74,20 +78,20 @@ export default function PaywallScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Annual tier */}
+        {/* Premium Annual tier */}
         <View style={styles.tierCard}>
-          <Text style={styles.tierName}>Annual</Text>
-          <Text style={styles.tierPrice}>$44.99</Text>
-          <Text style={styles.tierPeriod}>per year ($3.75/mo)</Text>
+          <Text style={styles.tierName}>Premium Annual</Text>
+          <Text style={styles.tierPrice}>$99</Text>
+          <Text style={styles.tierPeriod}>per year ($8.25/mo)</Text>
           <View style={styles.featureList}>
-            <Text style={styles.feature}>✓ Unlimited captures</Text>
-            <Text style={styles.feature}>✓ Unlimited actions</Text>
-            <Text style={styles.feature}>✓ Calendar sync</Text>
+            <Text style={styles.feature}>✓ Unlimited memories</Text>
+            <Text style={styles.feature}>✓ Smart SnapBack</Text>
+            <Text style={styles.feature}>✓ Contextual recall</Text>
             <Text style={styles.feature}>✗ Household sharing</Text>
           </View>
           <TouchableOpacity
             style={[styles.subscribeButton, checkout.isPending && styles.subscribeButtonDisabled]}
-            onPress={() => handleSubscribe("annual")}
+            onPress={() => handleSubscribe("premium_annual")}
             disabled={checkout.isPending}
           >
             {checkout.isPending ? (
@@ -101,17 +105,17 @@ export default function PaywallScreen() {
         {/* Household tier */}
         <View style={styles.tierCard}>
           <Text style={styles.tierName}>Household</Text>
-          <Text style={styles.tierPrice}>$49.99</Text>
-          <Text style={styles.tierPeriod}>per year (up to 4 members)</Text>
+          <Text style={styles.tierPrice}>$19.99</Text>
+          <Text style={styles.tierPeriod}>per month (up to 3 people)</Text>
           <View style={styles.featureList}>
-            <Text style={styles.feature}>✓ Everything in Annual</Text>
-            <Text style={styles.feature}>✓ Up to 4 members</Text>
+            <Text style={styles.feature}>✓ Everything in Premium</Text>
+            <Text style={styles.feature}>✓ Up to 3 people</Text>
             <Text style={styles.feature}>✓ Shared lists & chores</Text>
             <Text style={styles.feature}>✓ Shared calendar</Text>
           </View>
           <TouchableOpacity
             style={[styles.subscribeButton, checkout.isPending && styles.subscribeButtonDisabled]}
-            onPress={() => handleSubscribe("household")}
+            onPress={() => handleSubscribe("household_monthly")}
             disabled={checkout.isPending}
           >
             {checkout.isPending ? (
