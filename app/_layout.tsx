@@ -14,6 +14,7 @@ import { useAuthStore } from "../src/stores/authStore";
 import { useLocationStore } from "../src/stores/locationStore";
 import { ShareExtensionHandler } from "../src/components/capture/ShareExtensionHandler";
 import { trackEvent, identifyUser } from "../src/lib/posthog";
+import { setupPushRegistration, handleColdStartNotification } from "../src/hooks/usePushNotifications";
 import "../src/tasks/geofenceTask"; // register background geofence handler
 import { GEOFENCE_TASK } from "../src/tasks/geofenceTask";
 
@@ -100,6 +101,9 @@ export default function RootLayout() {
         // Tracked as "free" until the subscription API returns a real tier.
         tier: "free",
       });
+      // Remote push (SnapBack): ask permission + register token ONLY after
+      // the user is authenticated — never on cold start before auth resolves.
+      setupPushRegistration();
     }
   }, [user?.id]);
 
@@ -133,6 +137,10 @@ export default function RootLayout() {
           router.push(`/processing/${data.captureId}`);
         }
       });
+
+    // Cold start: app launched by tapping a SnapBack notification — the
+    // listener above does not fire for the launch notification; read it once.
+    handleColdStartNotification();
 
     return () => {
       notificationResponseListener.current?.remove();
