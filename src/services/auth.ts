@@ -1,16 +1,17 @@
 import { post, get } from "./api";
 import { AUTH } from "../constants/api";
 import { useAuthStore, type User } from "../stores/authStore";
+import * as SecureStore from "expo-secure-store";
 
 const USER_KEY = "snapdone_user";
 
-// Web-compatible storage
+// Single SecureStore-backed persistence. No web fallback (native-only app) —
+// on error we warn and no-op, never crash, never touch non-existent APIs.
 async function setSecurely(key: string, value: string) {
   try {
-    const { default: SecureStore } = await import("expo-secure-store");
     await SecureStore.setItemAsync(key, value);
-  } catch {
-    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn(`[secure-store] setSecurely(${key}) failed:`, e);
   }
 }
 
