@@ -1,29 +1,32 @@
 import { create } from "zustand";
 
-// Web-compatible storage fallback (SecureStore is native-only)
+import * as SecureStore from "expo-secure-store";
+
+// Single SecureStore-backed storage. This is a native-only app — no web
+// fallback, no localStorage (does not exist in React Native). Any SecureStore
+// failure is a graceful no-op: we warn, never crash, never silently pretend
+// the value persisted.
 const storage = {
   async getItemAsync(key: string): Promise<string | null> {
     try {
-      const { default: SecureStore } = await import("expo-secure-store");
       return await SecureStore.getItemAsync(key);
-    } catch {
-      return localStorage.getItem(key);
+    } catch (e) {
+      console.warn(`[secure-store] getItemAsync(${key}) failed:`, e);
+      return null;
     }
   },
   async setItemAsync(key: string, value: string): Promise<void> {
     try {
-      const { default: SecureStore } = await import("expo-secure-store");
       return await SecureStore.setItemAsync(key, value);
-    } catch {
-      localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn(`[secure-store] setItemAsync(${key}) failed:`, e);
     }
   },
   async deleteItemAsync(key: string): Promise<void> {
     try {
-      const { default: SecureStore } = await import("expo-secure-store");
       return await SecureStore.deleteItemAsync(key);
-    } catch {
-      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn(`[secure-store] deleteItemAsync(${key}) failed:`, e);
     }
   },
 };
