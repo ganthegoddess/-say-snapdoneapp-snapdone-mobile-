@@ -31,6 +31,7 @@ import { PipWisp } from "../../src/components/PipWisp";
 import { WaveformDots } from "../../src/components/ui/WaveformDots";
 import { useCaptureStore, type DraftCapture } from "../../src/stores/captureStore";
 import { useCapture } from "../../src/hooks/useCapture";
+import LimitReachedScreen from "../../src/components/upgrade/LimitReachedScreen";
 import { trackEvent } from "../../src/lib/posthog";
 
 const MAX_RECORDING_SECONDS = 15;
@@ -54,7 +55,7 @@ export default function PhotoPreviewScreen() {
   const photoUri = uri ? decodeURIComponent(uri) : "";
 
   const setDraft = useCaptureStore((state) => state.setDraft);
-  const { uploadPhoto } = useCapture();
+  const { uploadPhoto, upgradeRequired } = useCapture();
 
   const [phase, setPhase] = useState<PreviewPhase>("preview");
   const [voiceUri, setVoiceUri] = useState<string | null>(null);
@@ -106,6 +107,13 @@ export default function PhotoPreviewScreen() {
       }).catch(() => {});
     };
   }, []);
+
+  // Capture 31+ on the free tier — backend returned 402 / upgrade_required.
+  // Surface the friendly limit screen (Upgrade → /paywall) instead of a silent
+  // dead-end when the user taps "Save memory".
+  if (upgradeRequired) {
+    return <LimitReachedScreen />;
+  }
 
   // Guard against empty photo URI (deep link / share extension edge case)
   if (!photoUri) {
