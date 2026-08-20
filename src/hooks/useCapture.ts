@@ -3,6 +3,18 @@ import { useCaptureStore } from "../stores/captureStore";
 import * as captureService from "../services/capture";
 import { router } from "expo-router";
 import { trackEvent } from "../lib/posthog";
+import { ApiError } from "../services/api";
+
+/**
+ * True when the capture backend rejected the request because the free tier hit
+ * its monthly 30-capture limit — HTTP 402 / code "upgrade_required".
+ */
+export function isUpgradeRequired(err: unknown): boolean {
+  if (err instanceof ApiError) {
+    return err.status === 402 || err.code === "upgrade_required";
+  }
+  return false;
+}
 
 export function useCapture() {
   const draft = useCaptureStore((state) => state.draft);
@@ -12,6 +24,7 @@ export function useCapture() {
   const setIsUploading = useCaptureStore((state) => state.setIsUploading);
   const setUploadProgress = useCaptureStore((state) => state.setUploadProgress);
   const [error, setError] = useState<string | null>(null);
+  const [upgradeRequired, setUpgradeRequired] = useState(false);
 
   /**
    * Upload a photo/image capture — with an optional attached voice note
@@ -29,6 +42,7 @@ export function useCapture() {
   ) => {
     setIsUploading(true);
     setError(null);
+    setUpgradeRequired(false);
     const inputType = voiceNote ? "photo+voice" : "image";
     setDraft({
       source: "camera",
@@ -67,7 +81,12 @@ export function useCapture() {
         setIsUploading(false);
       }
     } catch (err: any) {
-      setError(err.message || "Upload failed");
+      if (isUpgradeRequired(err)) {
+        setUpgradeRequired(true);
+        trackEvent("limit_reached_shown", { capture_type: inputType });
+      } else {
+        setError(err.message || "Upload failed");
+      }
       setIsUploading(false);
       setDraft({ status: "failed" });
     }
@@ -77,6 +96,7 @@ export function useCapture() {
   const submitText = useCallback(async (text: string) => {
     setIsUploading(true);
     setError(null);
+    setUpgradeRequired(false);
     setDraft({ source: "screenshot", inputType: "text", status: "processing" });
 
     try {
@@ -86,7 +106,12 @@ export function useCapture() {
         router.replace(`/processing/${result.capture_id}`);
       }
     } catch (err: any) {
-      setError(err.message || "Submission failed");
+      if (isUpgradeRequired(err)) {
+        setUpgradeRequired(true);
+        trackEvent("limit_reached_shown", { capture_type: "text" });
+      } else {
+        setError(err.message || "Submission failed");
+      }
       setIsUploading(false);
     }
   }, []);
@@ -100,6 +125,7 @@ export function useCapture() {
   return {
     draft,
     error,
+    upgradeRequired,
     isUploading,
     uploadPhoto,
     submitText,
