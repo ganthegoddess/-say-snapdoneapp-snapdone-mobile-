@@ -1,53 +1,40 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Linking } from "react-native";
 import { router } from "expo-router";
 import { colors } from "../../src/constants/colors";
-import { useLocationStore } from "../../src/stores/locationStore";
 import { useAuthStore } from "../../src/stores/authStore";
+import { BrandGradient } from "../../src/components/ui/BrandGradient";
+import { useLocationStore } from "../../src/stores/locationStore";
+import { useSubscription } from "../../src/hooks/useSubscription";
+import { useActions } from "../../src/hooks/useActions";
+import { FREE_TIER } from "../../src/constants/api";
 
-interface SettingsItem {
-  icon: string;
-  label: string;
-  value: string;
-  route?: string;
-  /** If toggleKey is set, renders a Switch instead of value */
-  toggleKey?: string;
+/** Human label + a single-line value for a plan key. Each tier stands on its own. */
+function planLabel(tier: string | null): { title: string; sub: string } {
+  switch (tier) {
+    case "premium_monthly":
+    case "premium_annual":
+      return { title: "Premium Plan", sub: "Unlimited memory · Smart SnapBack" };
+    case "household_monthly":
+    case "household_annual":
+      return { title: "Household Plan", sub: "Up to 3 people · shared everything" };
+    case "household_plus_monthly":
+    case "household_plus_annual":
+      return { title: "Household Plus", sub: "Up to 6 people · grandparents" };
+    default:
+      return { title: "Free Plan", sub: "30 memories a month · basic SnapBack" };
+  }
 }
 
-const SETTINGS_SECTIONS: { title: string; items: SettingsItem[] }[] = [
-  {
-    title: "Profile",
-    items: [
-      { icon: "👤", label: "Name", value: "—" },
-      { icon: "📧", label: "Email", value: "—" },
-    ],
-  },
-  {
-    title: "Preferences",
-    items: [
-      { icon: "🔔", label: "Notifications", value: "On" },
-      { icon: "📍", label: "Location-based reminders", value: "", toggleKey: "location" },
-      { icon: "📅", label: "Calendar Sync", value: "Off" },
-    ],
-  },
-  {
-    title: "Household",
-    items: [
-      { icon: "🏠", label: "Manage Household", value: "Not set up", route: "/(tabs)/household" },
-    ],
-  },
-  {
-    title: "PIP & Capture",
-    items: [
-      { icon: "💡", label: "Recognition confidence", value: "High (90%)" },
-      { icon: "📸", label: "Preferred action types", value: "All" },
-    ],
-  },
-];
-
 export default function SettingsScreen() {
+  const user = useAuthStore((s) => s.user);
+  const signOut = useAuthStore((s) => s.signOut);
   const locationRemindersEnabled = useLocationStore((s) => s.locationRemindersEnabled);
   const setLocationRemindersEnabled = useLocationStore((s) => s.setLocationRemindersEnabled);
-  const signOut = useAuthStore((s) => s.signOut);
+  const { data: sub } = useSubscription();
+  const { data: actions } = useActions();
+  const tier = sub?.plan_type ?? null;
+  const tierInfo = planLabel(tier);
+  const usageCount = actions?.length ?? 0;
 
   const handleSignOut = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -63,73 +50,111 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const openTerms = () => Linking.openURL("https://snapdoneapp.com/terms");
+  const openPrivacy = () => Linking.openURL("https://snapdoneapp.com/privacy");
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Settings</Text>
 
-      {SETTINGS_SECTIONS.map((section, idx) => (
-        <View key={idx} style={styles.section}>
-          <Text style={styles.sectionTitle}>{section.title}</Text>
-          <View style={styles.card}>
-            {section.items.map((item, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[styles.row, i > 0 && styles.rowBorder]}
-                onPress={() => item.route && router.push(item.route as any)}
-                disabled={!!item.toggleKey}
-              >
-                <View style={styles.rowLeft}>
-                  <Text style={styles.rowIcon}>{item.icon}</Text>
-                  <Text style={styles.rowLabel}>{item.label}</Text>
-                </View>
-                {item.toggleKey === "location" ? (
-                  <Switch
-                    value={locationRemindersEnabled}
-                    onValueChange={setLocationRemindersEnabled}
-                    trackColor={{ false: colors.border, true: colors.brand.primary + "60" }}
-                    thumbColor={locationRemindersEnabled ? colors.brand.primary : colors.text.muted}
-                  />
-                ) : (
-                  <Text style={styles.rowValue}>{item.value}</Text>
-                )}
-              </TouchableOpacity>
-            ))}
+      {/* Account — answers "Who am I logged in as?" */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        <View style={styles.card}>
+          <View style={[styles.row, styles.rowBorder]}>
+            <Text style={styles.rowIcon}>👤</Text>
+            <Text style={styles.rowLabel}>Name</Text>
+            <Text style={styles.rowValue}>{user?.displayName || "—"}</Text>
+          </View>
+          <View style={[styles.row, styles.rowBorder]}>
+            <Text style={styles.rowIcon}>📧</Text>
+            <Text style={styles.rowLabel}>Email</Text>
+            <Text style={styles.rowValue}>{user?.email || "—"}</Text>
+          </View>
+          <View style={[styles.row]}>
+            <Text style={styles.rowIcon}>🎨</Text>
+            <Text style={styles.rowLabel}>Avatar</Text>
+            <Text style={styles.rowValue}>Coming Soon</Text>
           </View>
         </View>
-      ))}
+      </View>
 
-      {/* Subscription section */}
+      {/* PIP & AI — framed around PIP, plain language */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>PIP & AI</Text>
+        <View style={styles.card}>
+          <View style={[styles.row, styles.rowBorder]}>
+            <Text style={styles.rowIcon}>💡</Text>
+            <Text style={styles.rowLabel}>PIP Recognition Accuracy</Text>
+            <Text style={styles.rowLabelComingSoon}>Coming Soon</Text>
+          </View>
+          <View style={[styles.row, styles.rowBorder]}>
+            <Text style={styles.rowIcon}>🎙️</Text>
+            <Text style={styles.rowLabel}>Voice & Transcriptions</Text>
+            <Text style={styles.rowLabelComingSoon}>Coming Soon</Text>
+          </View>
+          <View style={[styles.row]}>
+            <Text style={styles.rowIcon}>🔔</Text>
+            <Text style={styles.rowLabel}>Location-based reminders</Text>
+            <Switch
+              value={locationRemindersEnabled}
+              onValueChange={setLocationRemindersEnabled}
+              trackColor={{ false: colors.border, true: colors.brand.primary + "60" }}
+              thumbColor={locationRemindersEnabled ? colors.brand.primary : colors.text.muted}
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Household */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Household</Text>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={[styles.row]}
+            onPress={() => router.push("/(tabs)/household")}
+          >
+            <Text style={styles.rowIcon}>👨‍👩‍👧‍👦</Text>
+            <Text style={styles.rowLabel}>Manage Household</Text>
+            <Text style={styles.rowChevron}>›</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Subscription — reads the real tier + usage */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Subscription</Text>
-        <TouchableOpacity
-          style={styles.upgradeCard}
-          onPress={() => router.push("/paywall")}
-        >
-          <Text style={styles.upgradeIcon}>⭐</Text>
-          <View style={styles.upgradeInfo}>
-            <Text style={styles.upgradeTitle}>Free Plan</Text>
-            <Text style={styles.upgradeText}>30 memories/month, no household sharing</Text>
-          </View>
-          <Text style={styles.upgradeChevron}>›</Text>
+        <TouchableOpacity onPress={() => router.push("/paywall")}>
+          <BrandGradient style={styles.upgradeCard} rounded={14}>
+            <Text style={styles.upgradeIcon}>⭐</Text>
+            <View style={styles.upgradeInfo}>
+              <Text style={styles.upgradeTitle}>{tierInfo.title}</Text>
+              <Text style={styles.upgradeText}>{tierInfo.sub}</Text>
+              <Text style={styles.usageText}>
+                {tier ? "Unlimited memories" : `${usageCount} / ${FREE_TIER.MAX_CAPTURES_PER_MONTH} memories this month`}
+              </Text>
+            </View>
+            <Text style={styles.upgradeChevron}>›</Text>
+          </BrandGradient>
         </TouchableOpacity>
       </View>
 
-      {/* About */}
+      {/* About — Terms & Privacy navigate */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
         <View style={styles.card}>
-          <View style={styles.row}>
+          <View style={[styles.row, styles.rowBorder]}>
             <Text style={styles.rowLabel}>Version</Text>
             <Text style={styles.rowValue}>0.1.0</Text>
           </View>
-          <View style={[styles.row, styles.rowBorder]}>
+          <TouchableOpacity style={[styles.row, styles.rowBorder]} onPress={openTerms}>
             <Text style={styles.rowLabel}>Terms of Service</Text>
             <Text style={styles.rowChevron}>›</Text>
-          </View>
-          <View style={[styles.row, styles.rowBorder]}>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.row]} onPress={openPrivacy}>
             <Text style={styles.rowLabel}>Privacy Policy</Text>
             <Text style={styles.rowChevron}>›</Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -139,7 +164,6 @@ export default function SettingsScreen() {
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
-
       <View style={{ height: 40 }} />
     </ScrollView>
   );
@@ -156,24 +180,22 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.white, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: colors.border },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16 },
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
-  rowLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  rowIcon: { fontSize: 18 },
-  rowLabel: { fontSize: 16, color: colors.text.primary },
+  rowIcon: { fontSize: 18, marginRight: 10 },
+  rowLabel: { fontSize: 15, color: colors.text.primary, flex: 1 },
   rowValue: { fontSize: 15, color: colors.text.muted },
   rowChevron: { fontSize: 20, color: colors.text.muted },
-
+  rowLabelComingSoon: { fontSize: 13, color: colors.warm.amber, fontWeight: "600" },
   // Upgrade card
   upgradeCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: colors.brand.light, borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: colors.brand.primary,
+    padding: 18, marginBottom: 8,
   },
   upgradeIcon: { fontSize: 24 },
   upgradeInfo: { flex: 1 },
-  upgradeTitle: { fontSize: 17, fontWeight: "700", color: colors.brand.dark },
-  upgradeText: { fontSize: 13, color: colors.brand.dark, marginTop: 2 },
-  upgradeChevron: { fontSize: 22, color: colors.brand.primary, fontWeight: "600" },
-
+  upgradeTitle: { fontSize: 17, fontWeight: "700", color: "#FFFFFF" },
+  upgradeText: { fontSize: 13, color: "rgba(255,255,255,0.92)", marginTop: 2 },
+  usageText: { fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 4 },
+  upgradeChevron: { fontSize: 22, color: "#FFFFFF", fontWeight: "600" },
   // Sign out
   signOutButton: {
     backgroundColor: colors.white,

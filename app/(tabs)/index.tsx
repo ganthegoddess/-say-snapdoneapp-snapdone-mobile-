@@ -8,6 +8,8 @@ import { ActionCard } from "../../src/components/actions/ActionCard";
 import { SnapBackCard } from "../../src/components/memories/SnapBackCard";
 import { CaptureButton } from "../../src/components/capture/CaptureButton";
 import { EmptyState } from "../../src/components/ui/EmptyState";
+import { PipWisp } from "../../src/components/PipWisp";
+import { BrandGradient } from "../../src/components/ui/BrandGradient";
 import { Skeleton } from "../../src/components/ui/Skeleton";
 import { useActions } from "../../src/hooks/useActions";
 import { useCompleteAction, useDeleteAction } from "../../src/hooks/useActions";
@@ -273,8 +275,15 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Welcome back</Text>
-          <Text style={styles.headline}>What's on your mind?</Text>
+          <Text style={styles.greeting}>
+            {(() => {
+              const h = new Date().getHours();
+              const prefix = h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+              const first = user?.displayName?.trim().split(/\s+/)[0];
+              return first ? `${prefix}, ${first} 👋` : prefix;
+            })()}
+          </Text>
+          <Text style={styles.headline}>What would you like PIP to help you remember today?</Text>
         </View>
         <View style={styles.headerRight}>
           {FEATURES.ASK_PIP && (
@@ -398,19 +407,23 @@ export default function HomeScreen() {
         )}
 
         {isLoading ? (
-          <>
-            <Skeleton lines={3} />
-            <Skeleton lines={2} />
-            <Skeleton lines={3} />
-          </>
+          <View style={styles.pipLoading}>
+            <PipWisp state="idle" position="center-screen" size={64} background="light" />
+            <Text style={styles.pipLoadingText}>Just a second — looking through your memories…</Text>
+          </View>
         ) : !showSearch && filteredActions.length === 0 ? (
-          <EmptyState
-            icon="📸"
-            title="Nothing here yet"
-            description="Snap a photo, share from another app, or record a voice note to get started"
-            actionLabel="Let PIP remember something"
-            onAction={() => router.push("/capture")}
-          />
+          <View style={styles.pipEmpty}>
+            <PipWisp state="idle" position="center-screen" size={88} background="light" />
+            <Text style={styles.pipEmptyTitle}>Hi! I'm PIP.</Text>
+            <Text style={styles.pipEmptyText}>
+              Welcome to SnapDone. You haven't saved any memories yet — let's save your first one, and I'll remember it for you.
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/capture")}>
+              <BrandGradient style={styles.pipCta} rounded={14}>
+                <Text style={styles.pipCtaText}>🎤 Save your first memory</Text>
+              </BrandGradient>
+            </TouchableOpacity>
+          </View>
         ) : !showSearch ? (
           <>
             {todayActions.length > 0 && (
@@ -464,6 +477,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
+  // Warm brand header wash (brand-light fading into surface) — mirrors the site.
+  homeWash: { backgroundColor: colors.brand.light + "55" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -472,8 +487,23 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingBottom: 12,
   },
-  greeting: { fontSize: 15, color: colors.text.muted, fontWeight: "500" },
+  greeting: { fontSize: 15, color: colors.brand.dark, fontWeight: "600" },
   headline: { fontSize: 28, fontWeight: "800", color: colors.deep, marginTop: 2 },
+  greetingUnderline: { width: 48, height: 3, marginTop: 8 },
+  // PIP loading
+  pipLoading: { alignItems: "center", paddingVertical: 80, paddingHorizontal: 24 },
+  pipLoadingText: { fontSize: 15, color: colors.text.muted, marginTop: 4 },
+  // PIP empty home (first-run companion)
+  pipEmpty: {
+    backgroundColor: colors.warm.cream,
+    borderRadius: 20, marginHorizontal: 20, marginTop: 8,
+    alignItems: "center", paddingVertical: 32, paddingHorizontal: 24,
+    borderWidth: 1, borderColor: colors.warm.soft,
+  },
+  pipEmptyTitle: { fontSize: 22, fontWeight: "800", color: colors.deep, marginTop: 4, marginBottom: 8 },
+  pipEmptyText: { fontSize: 15, color: colors.text.primary, textAlign: "center", lineHeight: 22, marginBottom: 20 },
+  pipCta: { paddingVertical: 14, paddingHorizontal: 28, minWidth: 220, alignItems: "center" },
+  pipCtaText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   pipBtn: {
     width: 40,
