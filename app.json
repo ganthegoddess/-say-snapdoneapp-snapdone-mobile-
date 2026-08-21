@@ -9,7 +9,7 @@
     "scheme": "snapdone",
     "userInterfaceStyle": "light",
     "ios": {
-      "buildNumber": "10",
+      "buildNumber": "11",
       "supportsTablet": true,
       "bundleIdentifier": "com.snapdoneapp.app",
       "infoPlist": {
@@ -45,8 +45,8 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "SnapDone uses your location to bring back the right memory at the right place \u2014 like a grocery list when you're near the store.",
-          "locationAlwaysAndWhenInUsePermission": "SnapDone uses your location in the background to quietly remind you at the right place \u2014 like a grocery list when you're near the store.",
+          "locationWhenInUsePermission": "SnapDone uses your location to bring back the right memory at the right place — like a grocery list when you're near the store.",
+          "locationAlwaysAndWhenInUsePermission": "SnapDone uses your location in the background to quietly remind you at the right place — like a grocery list when you're near the store.",
           "isIosBackgroundLocationEnabled": true
         }
       ],
