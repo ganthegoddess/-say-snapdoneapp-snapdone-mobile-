@@ -1,16 +1,23 @@
 import { Tabs } from "expo-router";
 import { View, Text, StyleSheet } from "react-native";
+import { colors } from "../../src/constants/colors";
 
+/**
+ * 4-tab IA (owner-decided, Aug 20):
+ *   Home / Memory Vault / Household / Settings
+ * Calendar, Lists and Tasks are removed as tabs — the underlying data model
+ * stays internal as memory TYPES; the user never files/organizes.
+ */
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#0891B2",
-        tabBarInactiveTintColor: "#64748B",
+        tabBarActiveTintColor: colors.brand.primary,
+        tabBarInactiveTintColor: colors.text.muted,
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopColor: "#E2E8F0",
+          backgroundColor: colors.white,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           paddingBottom: 8,
           paddingTop: 8,
@@ -18,7 +25,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: "500",
+          fontWeight: "600",
         },
       }}
     >
@@ -30,17 +37,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="calendar"
+        name="actions"
         options={{
-          title: "Calendar",
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📅</Text>,
-        }}
-      />
-      <Tabs.Screen
-        name="lists"
-        options={{
-          title: "Lists",
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📋</Text>,
+          title: "Memory Vault",
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🧠</Text>,
         }}
       />
       <Tabs.Screen
@@ -57,6 +57,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>⚙️</Text>,
         }}
       />
+      {/* Removed as tabs (underlying routes remain for deep links): calendar, lists */}
     </Tabs>
   );
 }

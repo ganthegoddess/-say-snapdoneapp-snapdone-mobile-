@@ -5,6 +5,7 @@ import { colors } from "../../src/constants/colors";
 import { Button } from "../../src/components/ui/Button";
 import { ActionCard } from "../../src/components/actions/ActionCard";
 import { useHouseholds, useCreateHousehold, useLeaveHousehold, useHousehold } from "../../src/hooks/useHouseholds";
+import { useSubscription } from "../../src/hooks/useSubscription";
 import { useAuthStore } from "../../src/stores/authStore";
 import { trackInviteEvent } from "../../src/services/analytics";
 import { trackEvent } from "../../src/lib/posthog";
@@ -96,6 +97,11 @@ export default function HouseholdScreen() {
 
   const members = householdDetails?.members || [];
   const isAdmin = householdDetails?.members?.find((m) => m.user_id === user?.id)?.role === "admin";
+  // Household = PAID ONLY (owner decision). A free user never gets in.
+  const { data: sub } = useSubscription();
+  const isPaid = !!sub?.plan_type;
+  // Member limits: Household = 3, Household Plus = 6 (corrected from hardcoded "4").
+  const memberLimit = (sub?.plan_type ?? "").includes("plus") ? 6 : 3;
 
   if (loadingHouseholds) {
     return (
@@ -105,6 +111,21 @@ export default function HouseholdScreen() {
     );
   }
 
+  // Paid gate — free users see a clean "upgrade to continue" screen.
+  if (!isPaid) {
+    return (
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.gateContainer} showsVerticalScrollIndicator={false}>
+          <Text style={styles.gateEmoji}>👨‍👩‍👧‍👦</Text>
+          <Text style={styles.gateTitle}>Household is a paid feature</Text>
+          <Text style={styles.gateText}>
+            Share memories, lists, and reminders with up to {memberLimit} people. Upgrade to Household to start your family's shared memory vault.
+          </Text>
+          <Button title="See Household Plans" onPress={() => router.push("/paywall")} variant="primary" size="lg" fullWidth />
+        </ScrollView>
+      </View>
+    );
+  }
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Household</Text>
@@ -117,7 +138,7 @@ export default function HouseholdScreen() {
               <Text style={styles.inviteIcon}>👨‍👩‍👧‍👦</Text>
               <Text style={styles.inviteTitle}>Start your household</Text>
               <Text style={styles.inviteText}>
-                Share grocery lists, chores, reminders, and events with up to 4 family members. One household per subscription.
+                Share grocery lists, chores, reminders, and events with up to {memberLimit} family members. One household per subscription.
               </Text>
               <Button title="Create Household" onPress={() => {
                 trackInviteEvent("invite_tapped", { source_screen: "household", household_id: undefined });
@@ -162,13 +183,13 @@ export default function HouseholdScreen() {
             <Text style={styles.inviteIcon}>👨‍👩‍👧‍👦</Text>
             <Text style={styles.inviteTitle}>{activeHousehold.name}</Text>
             <Text style={styles.inviteText}>
-              {members.length} of 4 members • Invite code: {activeHousehold.invite_code}
+              {members.length} of {memberLimit} members • Invite code: {activeHousehold.invite_code}
             </Text>
             <View style={{ flexDirection: "row", gap: 12, marginTop: 8 }}>
               <View style={{ flex: 1 }}>
                 <Button title="Share Invite" onPress={handleShareInvite} variant="primary" size="md" fullWidth />
               </View>
-              {members.length < 4 && (
+              {members.length < memberLimit && (
                 <View style={{ flex: 1 }}>
                   <Button title="Copy Code" onPress={() => {
                     const newCount = inviteCountRef.current + 1;
@@ -301,6 +322,11 @@ const styles = StyleSheet.create({
   inviteIcon: { fontSize: 40, marginBottom: 12 },
   inviteTitle: { fontSize: 18, fontWeight: "700", color: colors.brand.dark, marginBottom: 8 },
   inviteText: { fontSize: 14, color: colors.brand.dark, textAlign: "center", marginBottom: 16, lineHeight: 20 },
+  // Paid gate
+  gateContainer: { paddingVertical: 60, paddingHorizontal: 8, alignItems: "center" },
+  gateEmoji: { fontSize: 48, marginBottom: 16 },
+  gateTitle: { fontSize: 22, fontWeight: "800", color: colors.deep, textAlign: "center", marginBottom: 10 },
+  gateText: { fontSize: 15, color: colors.text.muted, textAlign: "center", lineHeight: 22, marginBottom: 24, paddingHorizontal: 8 },
   input: { width: "100%", backgroundColor: colors.white, borderRadius: 10, padding: 14, fontSize: 16, color: colors.deep, borderWidth: 1, borderColor: colors.border, marginBottom: 16 },
   cancelText: { fontSize: 15, color: colors.text.muted, fontWeight: "500" },
 

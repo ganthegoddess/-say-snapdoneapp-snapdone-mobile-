@@ -273,8 +273,15 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Welcome back</Text>
-          <Text style={styles.headline}>What's on your mind?</Text>
+          <Text style={styles.greeting}>
+            {(() => {
+              const h = new Date().getHours();
+              const prefix = h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+              const first = user?.displayName?.trim().split(/\s+/)[0];
+              return first ? `${prefix}, ${first} 👋` : prefix;
+            })()}
+          </Text>
+          <Text style={styles.headline}>What would you like PIP to help you remember today?</Text>
         </View>
         <View style={styles.headerRight}>
           {FEATURES.ASK_PIP && (
