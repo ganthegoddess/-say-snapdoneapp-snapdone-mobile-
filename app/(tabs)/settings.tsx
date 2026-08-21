@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Li
 import { router } from "expo-router";
 import { colors } from "../../src/constants/colors";
 import { useAuthStore } from "../../src/stores/authStore";
+import { BrandGradient } from "../../src/components/ui/BrandGradient";
 import { useLocationStore } from "../../src/stores/locationStore";
 import { useSubscription } from "../../src/hooks/useSubscription";
 import { useActions } from "../../src/hooks/useActions";
@@ -123,19 +124,18 @@ export default function SettingsScreen() {
       {/* Subscription — reads the real tier + usage */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Subscription</Text>
-        <TouchableOpacity
-          style={styles.upgradeCard}
-          onPress={() => router.push("/paywall")}
-        >
-          <Text style={styles.upgradeIcon}>⭐</Text>
-          <View style={styles.upgradeInfo}>
-            <Text style={styles.upgradeTitle}>{tierInfo.title}</Text>
-            <Text style={styles.upgradeText}>{tierInfo.sub}</Text>
-            <Text style={styles.usageText}>
-              {tier ? "Unlimited memories" : `${usageCount} / ${FREE_TIER.MAX_CAPTURES_PER_MONTH} memories this month`}
-            </Text>
-          </View>
-          <Text style={styles.upgradeChevron}>›</Text>
+        <TouchableOpacity onPress={() => router.push("/paywall")}>
+          <BrandGradient style={styles.upgradeCard} rounded={14}>
+            <Text style={styles.upgradeIcon}>⭐</Text>
+            <View style={styles.upgradeInfo}>
+              <Text style={styles.upgradeTitle}>{tierInfo.title}</Text>
+              <Text style={styles.upgradeText}>{tierInfo.sub}</Text>
+              <Text style={styles.usageText}>
+                {tier ? "Unlimited memories" : `${usageCount} / ${FREE_TIER.MAX_CAPTURES_PER_MONTH} memories this month`}
+              </Text>
+            </View>
+            <Text style={styles.upgradeChevron}>›</Text>
+          </BrandGradient>
         </TouchableOpacity>
       </View>
 
@@ -188,15 +188,14 @@ const styles = StyleSheet.create({
   // Upgrade card
   upgradeCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: colors.brand.light, borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: colors.brand.primary,
+    padding: 18, marginBottom: 8,
   },
   upgradeIcon: { fontSize: 24 },
   upgradeInfo: { flex: 1 },
-  upgradeTitle: { fontSize: 17, fontWeight: "700", color: colors.brand.dark },
-  upgradeText: { fontSize: 13, color: colors.brand.dark, marginTop: 2 },
-  usageText: { fontSize: 12, color: colors.text.muted, marginTop: 4 },
-  upgradeChevron: { fontSize: 22, color: colors.brand.primary, fontWeight: "600" },
+  upgradeTitle: { fontSize: 17, fontWeight: "700", color: "#FFFFFF" },
+  upgradeText: { fontSize: 13, color: "rgba(255,255,255,0.92)", marginTop: 2 },
+  usageText: { fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 4 },
+  upgradeChevron: { fontSize: 22, color: "#FFFFFF", fontWeight: "600" },
   // Sign out
   signOutButton: {
     backgroundColor: colors.white,

@@ -1,100 +1,116 @@
-// SnapDone brand color palette
-// Source of truth: the website's Brand Design System
-// (/home/team/shared/site/src/styles/app.css). The app MUST match the website.
+// ─────────────────────────────────────────────────────────────
+// SnapDone Mobile — THEME (single source of truth for the app)
+// OPTION A REBUILD (Aug 21). Maps the website's official brand
+// system (site/src/styles/app.css) onto the mobile app.
+// Canonical source: /home/team/shared/opt-a-design/mobile-theme.ts
 //
-// Signature gradient: teal -> green (the "snap" gradient) used on primary
-// buttons, the capture FAB, active tab, header accents — exactly like the site.
+// RULES: NO stray hexes in screens. Import from this file only.
+// Primary surfaces use the signature teal→green gradient.
+// Warm amber = PIP / celebration / SnapBack emphasis (never cold gray).
+// ─────────────────────────────────────────────────────────────
 
 export const colors = {
+  // ── Brand (teal/cyan) — the "snap" identity ──
   brand: {
-    primary: "#0891B2", // teal / cyan-600 — the SnapDone brand color
-    dark: "#0E7490", // cyan-700
-    light: "#ECFEFF", // cyan-50
+    primary: "#0891B2", // cyan-600  — primary action, active tab, links
+    dark:    "#0E7490", // cyan-700  — pressed/gradient stop
+    light:   "#ECFEFF", // cyan-50   — brand-tinted chips, selected bg, headers
   },
+  // ── Accents ──
   accent: {
-    complete: "#10B981", // emerald-500 (green)
-    warm: "#F59E0B", // amber-500 — the warm/celebration accent
+    complete: "#10B981", // emerald-500 — "done", completed memory, positive
+    warm:     "#F59E0B", // amber-500  — PIP moments, milestones, SnapBack highlights
   },
+  // ── Warm / cream tones (website warmth) ──
   warm: {
-    amber: "#F59E0B",
-    amberLight: "#FCC870",
-    amberSoft: "#FFECD0",
-    amberTint: "#FFE0B0",
-    cream: "#FFF8F0",
+    amber:  "#F59E0B", // amber-500  (alias of accent.warm)
+    soft:   "#FCC870", // soft amber — secondary warm fill, badges
+    cream:  "#FFECD0", // warm cream — warm backgrounds, milestone cards
+    cream2: "#FFE0B0", // deep cream — SnapBack callout bg, celebrating
+    pipGlow:"#FFF5D8", // warm ivory — PIP glow field (mirrors PipWisp)
   },
-  deep: "#0F172A", // slate-900
-  surface: "#F8FAFC", // slate-50 — soft warm surface, not stark white
-  surfaceWarm: "#FBF7F0", // warm cream surface for lived-in screens
+  // ── Neutrals ──
+  deep:     "#0F172A", // slate-900  — titles, dark text, hero-on-light
+  surface:  "#F8FAFC", // slate-50   — primary warm-white screen background
+  white:    "#FFFFFF",
   text: {
     primary: "#1E293B", // slate-800
-    muted: "#64748B", // slate-500
+    muted:   "#64748B", // slate-500
+    onGradient: "#FFFFFF",
   },
-  border: "#E2E8F0", // slate-200
-  white: "#FFFFFF",
-  error: "#EF4444", // red-500
+  // NOTE: `border` is offered BOTH as a flat string (legacy alias used across
+  // existing screens) and as an object with light/brand tokens. The flat
+  // string equals border.light. Keeps the whole app on one file (single source).
+  border: "#E2E8F0", // slate-200 — legacy flat alias (== border.light)
+  error: "#EF4444", // red-500  — destructive / friendly errors
   success: "#10B981", // emerald-500
-  // Signature "snap" gradient — teal -> green (matches the website)
+  // ── Signature gradient (what makes the site feel "SnapDone") ──
   gradient: {
-    // The color pair.
+    colors: ["#0891B2", "#10B981"] as [string, string], // 135deg teal → green
     from: "#0891B2",
     to: "#10B981",
-    // For LinearGradient components: [from, to]
-    colors: ["#0891B2", "#10B981"] as [string, string],
   },
+} as const;
+
+// Border object tokens (designer spec)
+export const border = {
+  light: "#E2E8F0", // slate-200 — card borders
+  brand: "#0891B2", // tinted border (focus ring)
+} as const;
+
+// Shadow recipe — soft, friendly, "lived-in" (not heavy/techy)
+export const shadow = {
+  card: {
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  fab: {
+    shadowColor: "#0891B2",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+} as const;
+
+// Legacy plural alias for soft card shadows (used by new rebuilt screens).
+export const shadows = {
+  soft: shadow.card,
+  fab: shadow.fab,
+} as const;
+
+// Radius language (rounded-2xl sits at 16, cards friendly-rounded)
+export const borderRadius = {
+  sm: 8,
+  md: 12,   // default button / input
+  lg: 16,   // rounded-2xl — cards
+  xl: 24,   // modals, big surfaces
+  full: 9999, // FAB, pills
 } as const;
 
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  "2xl": 48,
-} as const;
-
-export const borderRadius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  "2xl": 28, // soft, friendly rounded cards (site uses rounded-2xl)
-  full: 9999,
-} as const;
-
-export const shadows = {
-  // Soft shadow — mirrors the site's card language
-  soft: {
-    shadowColor: "#0F172A",
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  warm: {
-    shadowColor: "#F59E0B",
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
+  xs: 4, sm: 8, md: 16, lg: 24, xl: 32, "2xl": 48,
 } as const;
 
 export const typography = {
   fontFamily: "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
-  weights: {
-    regular: "400" as const,
-    medium: "500" as const,
-    semibold: "600" as const,
-    bold: "700" as const,
-    extrabold: "800" as const,
-  },
+  weights: { regular: "400", medium: "500", semibold: "600", bold: "700", extrabold: "800" } as const,
   sizes: {
-    caption: 12,
-    bodySmall: 14,
-    body: 16,
-    h3: 20,
-    h2: 24,
-    h1: 28,
-    display: 32,
-  },
+    caption: 12, bodySmall: 14, body: 16, h3: 20, h2: 24, h1: 28, display: 32,
+  } as const,
 } as const;
+
+// ── Semantic surface choices (where each background lands) ──
+// Keep screens warm; reserve pure white for cards layered on surface.
+export const surfaces = {
+  screen: "#F8FAFC",      // default app background (warm-white)
+  screenWarm: "#FFECD0",  // celebratory / milestone screen tint
+  card: "#FFFFFF",        // content cards
+  header: "#ECFEFF",      // Home hero / gradient-hint headers
+  elevated: "#FFFFFF",    // FAB, modals
+} as const;
+
+export default { colors, shadow, shadowBorder: border, borderRadius, spacing, typography, surfaces };

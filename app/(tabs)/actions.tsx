@@ -5,6 +5,7 @@ import { colors } from "../../src/constants/colors";
 import { ActionCard } from "../../src/components/actions/ActionCard";
 import { useActions } from "../../src/hooks/useActions";
 import { Skeleton } from "../../src/components/ui/Skeleton";
+import { BrandGradient } from "../../src/components/ui/BrandGradient";
 import type { ActionItem } from "../../src/services/actions";
 
 type FilterType = "all" | "pending" | "done" | "lists";
@@ -60,11 +61,21 @@ export default function ActionsScreen() {
         ><Text style={styles.searchIcon}>🔍</Text></TouchableOpacity>
       </View>
       <View style={styles.segControl}>
-        {FILTERS.map((f) => (
-          <TouchableOpacity key={f.key} style={[styles.seg, activeFilter === f.key && styles.segActive]} onPress={() => setActiveFilter(f.key)}>
-            <Text style={[styles.segText, activeFilter === f.key && styles.segTextActive]}>{f.label}</Text>
-          </TouchableOpacity>
-        ))}
+        {FILTERS.map((f) => {
+          const active = activeFilter === f.key;
+          return (
+            <BrandGradient
+              key={f.key}
+              colors={active ? colors.gradient.colors : ["transparent", "transparent"]}
+              style={styles.seg}
+              rounded={8}
+            >
+              <TouchableOpacity style={styles.segInner} onPress={() => setActiveFilter(f.key)}>
+                <Text style={[styles.segText, active && styles.segTextActive]}>{f.label}</Text>
+              </TouchableOpacity>
+            </BrandGradient>
+          );
+        })}
       </View>
       <ScrollView style={styles.list}>
         {isLoading ? (
@@ -82,12 +93,11 @@ export default function ActionsScreen() {
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🧠</Text>
             <Text style={styles.emptyTitle}>Your Memory Vault is empty</Text>
-            <Text style={styles.emptyText}>PIP remembers everything you save. Tap the camera below to capture your first memory.</Text>
-            <TouchableOpacity
-              style={styles.emptyCta}
-              onPress={() => router.push("/capture")}
-            >
-              <Text style={styles.emptyCtaText}>📷 Save your first memory</Text>
+            <Text style={styles.emptyText}>PIP remembers everything you save — photos, voice notes, and more. Capture your first memory below.</Text>
+            <TouchableOpacity onPress={() => router.push("/capture")}>
+              <BrandGradient style={styles.emptyCta} rounded={14}>
+                <Text style={styles.emptyCtaText}>📷 Save your first memory</Text>
+              </BrandGradient>
             </TouchableOpacity>
           </View>
         ) : (
@@ -123,10 +133,11 @@ const styles = StyleSheet.create({
   searchBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.white, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
   searchIcon: { fontSize: 18 },
   segControl: { flexDirection: "row", marginHorizontal: 20, marginBottom: 16, backgroundColor: colors.white, borderRadius: 10, padding: 3, borderWidth: 1, borderColor: colors.border },
-  seg: { flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 8 },
+  seg: { flex: 1, paddingVertical: 4, borderRadius: 8 },
+  segInner: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 6 },
   segActive: { backgroundColor: colors.brand.primary },
-  segText: { fontSize: 14, fontWeight: "600", color: colors.text.muted },
-  segTextActive: { color: colors.white },
+  segText: { fontSize: 13, fontWeight: "600", color: colors.text.muted },
+  segTextActive: { color: "#FFFFFF" },
   list: { flex: 1, paddingHorizontal: 20 },
   groupTitle: { fontSize: 15, fontWeight: "700", color: colors.deep, marginBottom: 8, marginTop: 12 },
   empty: { alignItems: "center", paddingTop: 80, paddingHorizontal: 24 },
@@ -143,10 +154,9 @@ const styles = StyleSheet.create({
   retryText: { color: colors.white, fontSize: 15, fontWeight: "700" },
   emptyCta: {
     marginTop: 20,
-    backgroundColor: colors.brand.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    backgroundColor: "transparent",
   },
-  emptyCtaText: { color: colors.white, fontSize: 15, fontWeight: "700" },
+  emptyCtaText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
 });
