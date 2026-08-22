@@ -7,8 +7,8 @@ import { colors } from "../../src/constants/colors";
 import { ActionCard } from "../../src/components/actions/ActionCard";
 import { SnapBackCard } from "../../src/components/memories/SnapBackCard";
 import { CaptureButton } from "../../src/components/capture/CaptureButton";
-import { EmptyState } from "../../src/components/ui/EmptyState";
 import { PipWisp } from "../../src/components/PipWisp";
+import { PipBadge } from "../../src/components/ui/PipBadge";
 import { BrandGradient } from "../../src/components/ui/BrandGradient";
 import { Skeleton } from "../../src/components/ui/Skeleton";
 import { useActions } from "../../src/hooks/useActions";
@@ -17,25 +17,14 @@ import { useLocationContext } from "../../src/hooks/useLocationContext";
 import { useLocationStore } from "../../src/stores/locationStore";
 import { useRecallMemories, useUpdateMemoryState } from "../../src/hooks/useMemories";
 import { useAuthStore } from "../../src/stores/authStore";
-import { FEATURES } from "../../src/constants/features";
 import { getLocationBadgeIcon } from "../../src/utils/locationContext";
+import { pip, fill } from "../../src/constants/pipCopy";
 import { trackEvent } from "../../src/lib/posthog";
 import type { ActionItem } from "../../src/services/actions";
 import type { RecalledMemory } from "../../src/services/memories";
 
 const LOCATION_COOLDOWN = 30 * 60 * 1000; // 30 minutes
 const RECALL_COOLDOWN = 5 * 60 * 1000; // 5 minutes between recall checks
-
-type FilterKey = "all" | "reminders" | "events" | "lists" | "bills" | "shared" | "assigned";
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "reminders", label: "Reminders" },
-  { key: "events", label: "Events" },
-  { key: "lists", label: "Lists" },
-  { key: "bills", label: "Bills" },
-  { key: "shared", label: "Shared" },
-  { key: "assigned", label: "Assigned" },
-];
 
 const TYPE_MAP: Record<string, string> = {
   reminder: "reminder",
@@ -76,12 +65,8 @@ async function getUpcomingEventTitles(): Promise<string[]> {
 }
 
 export default function HomeScreen() {
-  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const user = useAuthStore((s) => s.user);
-  const actionsFilters = activeFilter === "assigned" && user?.id
-    ? { assignee_id: user.id }
-    : undefined;
-  const { data: actions, isLoading } = useActions(actionsFilters);
+  const { data: actions, isLoading } = useActions();
   const completeAction = useCompleteAction();
   const deleteAction = useDeleteAction();
 
@@ -188,24 +173,13 @@ export default function HomeScreen() {
     return () => sub.remove();
   }, [locationEnabled, lastLocationCheck, checkLocationContext, markLocationChecked, recall]);
 
-  const filteredActions = (actions || []).filter((a: ActionItem) => {
-    if (activeFilter === "all") return true;
-    if (activeFilter === "shared") return !!a.household_id;
-    if (activeFilter === "assigned") return a.assignee_id === user?.id;
-    if (activeFilter === "reminders") return a.action_type === "reminder";
-    if (activeFilter === "events") return a.action_type === "event";
-    if (activeFilter === "lists") return a.action_type === "task" || a.action_type === "grocery_list";
-    if (activeFilter === "bills") return a.action_type === "bill";
-    return true;
-  });
-
-  const todayActions = filteredActions.filter((a: ActionItem) => {
+  const todayActions = (actions || []).filter((a: ActionItem) => {
     if (!a.due_date) return false;
     const today = new Date();
     const due = new Date(a.due_date);
     return due.toDateString() === today.toDateString();
   });
-  const upcomingActions = filteredActions.filter((a: ActionItem) => !todayActions.includes(a));
+  const upcomingActions = (actions || []).filter((a: ActionItem) => !todayActions.includes(a));
 
   const handleConfirm = useCallback(
     (id: string) => {
@@ -273,8 +247,8 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
+      <View style={[styles.header, styles.homeWash]}>
+        <View style={styles.greetingBlock}>
           <Text style={styles.greeting}>
             {(() => {
               const h = new Date().getHours();
@@ -284,16 +258,6 @@ export default function HomeScreen() {
             })()}
           </Text>
           <Text style={styles.headline}>What would you like PIP to help you remember today?</Text>
-        </View>
-        <View style={styles.headerRight}>
-          {FEATURES.ASK_PIP && (
-            <TouchableOpacity onPress={() => router.push("/ask-pip")} style={styles.pipBtn}>
-              <Text style={styles.pipBtnIcon}>💡</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity onPress={() => router.push("/(tabs)/settings")} style={styles.settingsBtn}>
-            <Text style={styles.settingsIcon}>⚙️</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -314,23 +278,6 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
       </View>
-
-      {/* Segmented control (hidden during search) */}
-      {!showSearch && (
-        <View style={styles.segControl}>
-          {FILTERS.map((f) => (
-            <TouchableOpacity
-              key={f.key}
-              style={[styles.seg, activeFilter === f.key && styles.segActive]}
-              onPress={() => setActiveFilter(f.key)}
-            >
-              <Text style={[styles.segText, activeFilter === f.key && styles.segTextActive]}>
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
 
       <ScrollView style={styles.feed} showsVerticalScrollIndicator={false}>
         {/* Search results */}
@@ -363,7 +310,10 @@ export default function HomeScreen() {
         {showPipMemories && pipMemories.length > 0 && !showSearch && (
           <View style={styles.pipSection}>
             <View style={styles.pipHeader}>
-              <Text style={styles.pipTitle}>💭 PIP remembered...</Text>
+              <View style={styles.pipHeaderTitle}>
+                <PipWisp state="remembered" position="left-banner" size={28} background="light" />
+                <Text style={styles.pipTitle}>PIP remembered…</Text>
+              </View>
               <TouchableOpacity onPress={() => setShowPipMemories(false)} hitSlop={8}>
                 <Text style={styles.pipDismiss}>✕</Text>
               </TouchableOpacity>
@@ -409,18 +359,18 @@ export default function HomeScreen() {
         {isLoading ? (
           <View style={styles.pipLoading}>
             <PipWisp state="idle" position="center-screen" size={64} background="light" />
-            <Text style={styles.pipLoadingText}>Just a second — looking through your memories…</Text>
+            <Text style={styles.pipLoadingText}>{pip.loading.searching}</Text>
           </View>
-        ) : !showSearch && filteredActions.length === 0 ? (
+        ) : !showSearch && (actions || []).length === 0 ? (
           <View style={styles.pipEmpty}>
-            <PipWisp state="idle" position="center-screen" size={88} background="light" />
-            <Text style={styles.pipEmptyTitle}>Hi! I'm PIP.</Text>
-            <Text style={styles.pipEmptyText}>
-              Welcome to SnapDone. You haven't saved any memories yet — let's save your first one, and I'll remember it for you.
+            <PipBadge size={88} />
+            <Text style={styles.pipEmptyTitle}>
+              {fill(pip.emptyHome.title, { name: user?.displayName })}
             </Text>
+            <Text style={styles.pipEmptyText}>{pip.emptyHome.body}</Text>
             <TouchableOpacity onPress={() => router.push("/capture")}>
               <BrandGradient style={styles.pipCta} rounded={14}>
-                <Text style={styles.pipCtaText}>🎤 Save your first memory</Text>
+                <Text style={styles.pipCtaText}>Snap your first memory</Text>
               </BrandGradient>
             </TouchableOpacity>
           </View>
@@ -477,18 +427,16 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
-  // Warm brand header wash (brand-light fading into surface) — mirrors the site.
-  homeWash: { backgroundColor: colors.brand.light + "55" },
+  // Warm brand header wash (brand-light into surface) — mirrors the site.
+  homeWash: { backgroundColor: colors.brand.light },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 56,
-    paddingBottom: 12,
+    paddingBottom: 20,
   },
+  greetingBlock: {},
   greeting: { fontSize: 15, color: colors.brand.dark, fontWeight: "600" },
-  headline: { fontSize: 28, fontWeight: "800", color: colors.deep, marginTop: 2 },
+  headline: { fontSize: 28, fontWeight: "800", color: colors.deep, marginTop: 2, lineHeight: 36 },
   greetingUnderline: { width: 48, height: 3, marginTop: 8 },
   // PIP loading
   pipLoading: { alignItems: "center", paddingVertical: 80, paddingHorizontal: 24 },
@@ -500,37 +448,17 @@ const styles = StyleSheet.create({
     alignItems: "center", paddingVertical: 32, paddingHorizontal: 24,
     borderWidth: 1, borderColor: colors.warm.soft,
   },
-  pipEmptyTitle: { fontSize: 22, fontWeight: "800", color: colors.deep, marginTop: 4, marginBottom: 8 },
+  pipEmptyTitle: { fontSize: 22, fontWeight: "800", color: colors.deep, marginTop: 16, marginBottom: 8 },
   pipEmptyText: { fontSize: 15, color: colors.text.primary, textAlign: "center", lineHeight: 22, marginBottom: 20 },
   pipCta: { paddingVertical: 14, paddingHorizontal: 28, minWidth: 220, alignItems: "center" },
   pipCtaText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  pipBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.brand.light + "20",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pipBtnIcon: { fontSize: 18 },
-  settingsBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.white,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  settingsIcon: { fontSize: 18 },
 
   // Search
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
+    marginTop: 12,
     marginBottom: 12,
     backgroundColor: colors.white,
     borderRadius: 12,
@@ -544,33 +472,17 @@ const styles = StyleSheet.create({
   searchClear: { fontSize: 16, color: colors.text.muted, fontWeight: "700", paddingHorizontal: 4 },
   searchEmpty: { fontSize: 14, color: colors.text.muted, textAlign: "center", marginTop: 24 },
 
-  // Segmented control
-  segControl: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: colors.white,
-    borderRadius: 10,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  seg: { flex: 1, paddingVertical: 7, alignItems: "center", borderRadius: 8 },
-  segActive: { backgroundColor: colors.brand.primary },
-  segText: { fontSize: 12, fontWeight: "600", color: colors.text.muted },
-  segTextActive: { color: colors.white },
-
   feed: { flex: 1, paddingHorizontal: 16 },
   sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.deep, marginBottom: 12, marginTop: 8 },
 
   // PIP remembered
   pipSection: {
-    backgroundColor: colors.accent.warm + "15",
-    borderRadius: 14,
+    backgroundColor: colors.warm.cream2,
+    borderRadius: 16,
     padding: 14,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.accent.warm + "40",
+    borderWidth: 1.5,
+    borderColor: colors.accent.warm,
   },
   pipHeader: {
     flexDirection: "row",
@@ -578,6 +490,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
+  pipHeaderTitle: { flexDirection: "row", alignItems: "center", gap: 8 },
   pipTitle: { fontSize: 16, fontWeight: "700", color: colors.accent.warm },
   pipDismiss: { fontSize: 16, color: colors.text.muted, fontWeight: "700", paddingHorizontal: 4 },
 

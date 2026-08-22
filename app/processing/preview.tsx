@@ -17,6 +17,7 @@ import {
   Animated,
   Platform,
   Alert,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import {
@@ -143,7 +144,10 @@ export default function PhotoPreviewScreen() {
         Alert.alert(
           "Microphone Access",
           "Microphone access is needed to add voice notes to your memories. Enable it in Settings.",
-          [{ text: "OK" }]
+          [
+            { text: "Not Now", style: "cancel" },
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+          ]
         );
         return;
       }

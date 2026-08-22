@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import { View, Text, StyleSheet } from "react-native";
 import { BrandGradient } from "../../src/components/ui/BrandGradient";
 import { colors } from "../../src/constants/colors";
+import { useSubscription } from "../../src/hooks/useSubscription";
 
 interface TabIconProps {
   focused: boolean;
@@ -19,13 +20,19 @@ function TabIcon({ focused, icon }: TabIconProps) {
   );
 }
 
+/** Small amber "PRO" badge so the paid family tier is obvious without a dead tap. */
+
 /**
  * 4-tab IA (owner-decided, Aug 20):
  *   Home / Memory Vault / Household / Settings
  * Calendar, Lists and Tasks are removed as tabs — the underlying data model
  * stays internal as memory TYPES; the user never files/organizes.
+ * The Household tab carries a "PRO" amber badge while the user is on Free.
  */
 export default function TabLayout() {
+  const { data: sub } = useSubscription();
+  const isFree = !sub?.plan_type;
+
   return (
     <Tabs
       screenOptions={{
@@ -65,6 +72,13 @@ export default function TabLayout() {
         options={{
           title: "Household",
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="👨‍👩‍👧‍👦" />,
+          tabBarBadge: isFree ? "PRO" : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.accent.warm,
+            color: "#FFFFFF",
+            fontSize: 8,
+            fontWeight: "800",
+          },
         }}
       />
       <Tabs.Screen
