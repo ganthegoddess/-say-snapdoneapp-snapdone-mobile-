@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
   View, Text, StyleSheet, Modal, Pressable, TouchableOpacity, TextInput,
-  Platform, ActionSheetIOS, Alert, ActivityIndicator,
+  Platform, ActionSheetIOS, Alert, ActivityIndicator, Linking,
 } from "react-native";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -91,7 +91,14 @@ export function CaptureSheet({ visible, onClose }: CaptureSheetProps) {
     try {
       const { status } = await requestRecordingPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Microphone Access", "Microphone access is needed to capture voice notes. Enable it in Settings.", [{ text: "OK" }]);
+        Alert.alert(
+          "Microphone Access",
+          "Microphone access is needed to capture voice notes. Enable it in Settings.",
+          [
+            { text: "Not Now", style: "cancel" },
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+          ]
+        );
         return;
       }
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });

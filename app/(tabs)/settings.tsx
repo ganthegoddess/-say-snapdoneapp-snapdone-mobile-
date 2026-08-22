@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { colors } from "../../src/constants/colors";
 import { useAuthStore } from "../../src/stores/authStore";
 import { BrandGradient } from "../../src/components/ui/BrandGradient";
+import { Avatar } from "../../src/components/ui/Avatar";
 import { useLocationStore } from "../../src/stores/locationStore";
 import { useSubscription } from "../../src/hooks/useSubscription";
 import { useActions } from "../../src/hooks/useActions";
@@ -61,32 +62,31 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.card}>
-          <View style={[styles.row, styles.rowBorder]}>
-            <Text style={styles.rowIcon}>👤</Text>
-            <Text style={styles.rowLabel}>Name</Text>
-            <Text style={styles.rowValue}>{user?.displayName || "—"}</Text>
+          <View style={styles.profileRow}>
+            <Avatar name={user?.displayName || "?"} size={44} />
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{user?.displayName || "—"}</Text>
+              <Text style={styles.profileEmail}>{user?.email || "—"}</Text>
+            </View>
           </View>
           <View style={[styles.row, styles.rowBorder]}>
             <Text style={styles.rowIcon}>📧</Text>
             <Text style={styles.rowLabel}>Email</Text>
             <Text style={styles.rowValue}>{user?.email || "—"}</Text>
           </View>
-          <View style={[styles.row]}>
-            <Text style={styles.rowIcon}>🎨</Text>
-            <Text style={styles.rowLabel}>Avatar</Text>
-            <Text style={styles.rowValue}>Coming Soon</Text>
-          </View>
         </View>
       </View>
 
-      {/* PIP & AI — framed around PIP, plain language */}
+      {/* PIP — framed around PIP; AI stays invisible */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>PIP & AI</Text>
+        <Text style={styles.sectionTitle}>PIP</Text>
         <View style={styles.card}>
           <View style={[styles.row, styles.rowBorder]}>
-            <Text style={styles.rowIcon}>💡</Text>
-            <Text style={styles.rowLabel}>PIP Recognition Accuracy</Text>
-            <Text style={styles.rowLabelComingSoon}>Coming Soon</Text>
+            <Text style={styles.rowIcon}>✨</Text>
+            <View style={styles.rowTextStack}>
+              <Text style={styles.rowLabel}>PIP Recognition accuracy</Text>
+              <Text style={styles.rowSub}>PIP gets better at reading your handwriting and voice the more you use it.</Text>
+            </View>
           </View>
           <View style={[styles.row, styles.rowBorder]}>
             <Text style={styles.rowIcon}>🎙️</Text>
@@ -180,6 +180,13 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.white, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: colors.border },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16 },
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  rowTextStack: { flex: 1 },
+  rowSub: { fontSize: 12, color: colors.text.muted, marginTop: 2, lineHeight: 17 },
+  // Profile header
+  profileRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
+  profileInfo: { flex: 1 },
+  profileName: { fontSize: 17, fontWeight: "700", color: colors.deep },
+  profileEmail: { fontSize: 13, color: colors.text.muted, marginTop: 2 },
   rowIcon: { fontSize: 18, marginRight: 10 },
   rowLabel: { fontSize: 15, color: colors.text.primary, flex: 1 },
   rowValue: { fontSize: 15, color: colors.text.muted },

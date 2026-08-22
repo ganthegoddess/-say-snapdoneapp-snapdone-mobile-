@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Image } from "react-native";
 import { colors } from "../../constants/colors";
+import { BrandGradient } from "./BrandGradient";
 
 interface AvatarProps {
   name: string;
@@ -7,13 +8,13 @@ interface AvatarProps {
   size?: number;
 }
 
+/**
+ * Avatar — shows ONLY the name-derived initial in a signature gradient circle.
+ * Never a photo-upload teaser (identity redesign §5): if there's no editable
+ * photo yet, there is no "change photo / coming soon" affordance at all.
+ */
 export function Avatar({ name, uri, size = 40 }: AvatarProps) {
-  const initials = name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const initial = (name || "?").trim().charAt(0).toUpperCase() || "?";
 
   if (uri) {
     return (
@@ -25,23 +26,17 @@ export function Avatar({ name, uri, size = 40 }: AvatarProps) {
   }
 
   return (
-    <View
-      style={[
-        styles.placeholder,
-        { width: size, height: size, borderRadius: size / 2 },
-      ]}
-    >
-      <Text style={[styles.initials, { fontSize: size * 0.4 }]}>{initials}</Text>
-    </View>
+    <BrandGradient style={[styles.circle, { width: size, height: size, borderRadius: size / 2 }]} rounded={size / 2}>
+      <Text style={[styles.initial, { fontSize: size * 0.42 }]}>{initial}</Text>
+    </BrandGradient>
   );
 }
 
 const styles = StyleSheet.create({
   image: { backgroundColor: colors.border },
-  placeholder: {
-    backgroundColor: colors.brand.light,
+  circle: {
     alignItems: "center",
     justifyContent: "center",
   },
-  initials: { color: colors.brand.dark, fontWeight: "700" },
+  initial: { color: "#FFFFFF", fontWeight: "800" },
 });
