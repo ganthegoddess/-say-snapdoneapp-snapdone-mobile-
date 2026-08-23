@@ -11,6 +11,8 @@ import { useCaptureStore } from "../../stores/captureStore";
 import * as captureService from "../../services/capture";
 import { trackEvent } from "../../lib/posthog";
 import { isUpgradeRequired } from "../../hooks/useCapture";
+import { Icon } from "../ui/icons";
+import { pip } from "../../constants/pipCopy";
 
 const MAX_RECORDING_SECONDS = 120; // matches backend MAX_VOICE_DURATION_MS
 const MIN_RECORDING_SECONDS = 1;
@@ -38,19 +40,45 @@ function useElapsed(active: boolean) {
 interface CaptureSheetProps {
   visible: boolean;
   onClose: () => void;
+  /** Open directly into a mode (Home's stacked Snap/Tell/Type actions). */
+  initialMode?: "photo" | "voice" | "note";
 }
 
 /**
- * The capture sheet — the product's "What would you like me to remember?"
- * menu. Three ways in: 📷 Photo, 🎤 Voice, 📝 Note.
+ * The capture sheet — the product's "What can I carry for you today?"
+ * menu. Three ways in: Photo, Voice, Note (DESIGN-SYSTEM §6.2 voice).
  */
-export function CaptureSheet({ visible, onClose }: CaptureSheetProps) {
+export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProps) {
   const setDraft = useCaptureStore((state) => state.setDraft);
   const [voiceMode, setVoiceMode] = useState(false);
   const [noteMode, setNoteMode] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Open into the requested mode when the sheet becomes visible (Home actions).
+  const takePhotoRef = useRef<() => void>(() => {});
+  const startVoiceRef = useRef<() => void>(() => {});
+  const didOpen = useRef<boolean>(false);
+  useEffect(() => {
+    if (visible && !didOpen.current) {
+      didOpen.current = true;
+      if (initialMode === "photo") {
+        takePhotoRef.current();
+        return;
+      }
+      if (initialMode === "voice") {
+        startVoiceRef.current();
+        return;
+      }
+      if (initialMode === "note") {
+        setNoteMode(true);
+        setVoiceMode(false);
+      }
+    } else if (!visible) {
+      didOpen.current = false;
+    }
+  }, [visible, initialMode]);
 
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
@@ -73,6 +101,7 @@ export function CaptureSheet({ visible, onClose }: CaptureSheetProps) {
     handleClose();
     router.push("/capture");
   };
+  takePhotoRef.current = takePhoto;
   const pickFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return;
@@ -111,6 +140,7 @@ export function CaptureSheet({ visible, onClose }: CaptureSheetProps) {
       setError("Couldn't start recording. Please try again.");
     }
   }, [recorder]);
+  startVoiceRef.current = startVoice;
 
   const stopAndUpload = useCallback(async () => {
     if (!recorderState?.isRecording) return;
@@ -185,7 +215,7 @@ export function CaptureSheet({ visible, onClose }: CaptureSheetProps) {
       <Pressable style={styles.overlay} onPress={handleClose}>
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>
-            {voiceMode ? "Recording your voice note…" : "What would you like me to remember?"}
+            {voiceMode ? "Recording your voice note…" : pip.captureSheet.title}
           </Text>
 
           {/* VOICE recording UI */}
@@ -240,7 +270,7 @@ export function CaptureSheet({ visible, onClose }: CaptureSheetProps) {
           {!voiceMode && !noteMode && (
             <>
               <TouchableOpacity style={styles.sheetOption} onPress={takePhoto}>
-                <Text style={styles.sheetIcon}>📷</Text>
+                <View style={styles.sheetIconWrap}><Icon name="camera" size={24} color={colors.brand.primary} /></View>
                 <View style={styles.optionBody}>
                   <Text style={styles.sheetText}>Photo</Text>
                   <Text style={styles.sheetSub}>Snap a receipt, flyer, note, or screenshot</Text>
@@ -248,7 +278,7 @@ export function CaptureSheet({ visible, onClose }: CaptureSheetProps) {
                 <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.sheetOption} onPress={startVoice}>
-                <Text style={styles.sheetIcon}>🎤</Text>
+                <View style={styles.sheetIconWrap}><Icon name="mic" size={24} color={colors.accent.warm} /></View>
                 <View style={styles.optionBody}>
                   <Text style={styles.sheetText}>Voice</Text>
                   <Text style={styles.sheetSub}>Say it — PIP remembers it</Text>
@@ -256,7 +286,7 @@ export function CaptureSheet({ visible, onClose }: CaptureSheetProps) {
                 <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.sheetOption} onPress={() => setNoteMode(true)}>
-                <Text style={styles.sheetIcon}>📝</Text>
+                <View style={styles.sheetIconWrap}><Icon name="note" size={24} color={colors.brand.dark} /></View>
                 <View style={styles.optionBody}>
                   <Text style={styles.sheetText}>Note</Text>
                   <Text style={styles.sheetSub}>Type what you don't want to forget</Text>
@@ -264,7 +294,7 @@ export function CaptureSheet({ visible, onClose }: CaptureSheetProps) {
                 <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.sheetOption} onPress={pickFromLibrary}>
-                <Text style={styles.sheetIcon}>🖼️</Text>
+                <View style={styles.sheetIconWrap}><Icon name="upload" size={24} color={colors.text.muted} /></View>
                 <View style={styles.optionBody}>
                   <Text style={styles.sheetText}>Choose from Library</Text>
                   <Text style={styles.sheetSub}>Already have the photo?</Text>
@@ -288,7 +318,7 @@ const styles = StyleSheet.create({
   sheet: { backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
   sheetTitle: { fontSize: 18, fontWeight: "800", color: colors.deep, marginBottom: 16, textAlign: "center" },
   sheetOption: { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12 },
-  sheetIcon: { fontSize: 24 },
+  sheetIconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.brand.light },
   optionBody: { flex: 1 },
   sheetText: { fontSize: 17, color: colors.deep, fontWeight: "700" },
   sheetSub: { fontSize: 13, color: colors.text.muted, marginTop: 2 },

@@ -1,6 +1,5 @@
 import { Tabs } from "expo-router";
 import { View, Text, StyleSheet } from "react-native";
-import { BrandGradient } from "../../src/components/ui/BrandGradient";
 import { colors } from "../../src/constants/colors";
 import { useSubscription } from "../../src/hooks/useSubscription";
 
@@ -8,16 +7,14 @@ interface TabIconProps {
   focused: boolean;
   icon: string;
 }
-/** Active tab gets the signature gradient pill behind it — the "snap" moment. */
+/**
+ * Tab bar — premium emoji glyphs (owner-carved exception to the no-emoji
+ * rule, DESIGN-SYSTEM §5 / §2): Home 🏠 · Vault 📁 · Settings ⚙️ ·
+ * Household 👨‍👩‍👧‍👦. The emoji stays full-colour on BOTH states (NOT
+ * monochrome dots); the ACTIVE tab label turns bold teal — calm, no bounce.
+ */
 function TabIcon({ focused, icon }: TabIconProps) {
-  if (!focused) {
-    return <Text style={styles.inactive}>{icon}</Text>;
-  }
-  return (
-    <BrandGradient style={styles.activePill} rounded={9999}>
-      <Text style={styles.activeText}>{icon}</Text>
-    </BrandGradient>
-  );
+  return <Text style={[styles.emoji, focused && styles.activeEmoji]}>{icon}</Text>;
 }
 
 /** Small amber "PRO" badge so the paid family tier is obvious without a dead tap. */
@@ -37,14 +34,14 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.white,
+        tabBarActiveTintColor: colors.brand.primary,
         tabBarInactiveTintColor: colors.text.muted,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
           paddingBottom: 8,
-          paddingTop: 8,
+          paddingTop: 6,
           height: 64,
         },
         tabBarLabelStyle: {
@@ -64,7 +61,7 @@ export default function TabLayout() {
         name="actions"
         options={{
           title: "Memory Vault",
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="🧠" />,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="📁" />,
         }}
       />
       <Tabs.Screen
@@ -94,12 +91,6 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  activePill: {
-    width: 40,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  activeText: { fontSize: 18, color: "#FFFFFF" },
-  inactive: { fontSize: 18, color: colors.text.muted, padding: 4 },
+  emoji: { fontSize: 22, color: colors.text.muted, padding: 4 },
+  activeEmoji: { color: colors.brand.primary, transform: [{ scale: 1.06 }] },
 });
