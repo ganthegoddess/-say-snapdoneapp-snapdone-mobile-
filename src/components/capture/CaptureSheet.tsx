@@ -225,7 +225,7 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
 
   const CAPTURE_MODES: {
     key: string;
-    icon: "camera" | "mic" | "note" | "upload";
+    icon: "camera" | "mic" | "note" | "album" | "upload";
     tint: string;
     title: string;
     sub: string;
@@ -234,7 +234,7 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
     { key: "photo", icon: "camera", tint: "#0891B2", title: "Photo", sub: "Snap a receipt, flyer, note, or screenshot", onPress: takePhoto },
     { key: "voice", icon: "mic", tint: "#F59E0B", title: "Voice", sub: "Say it — PIP remembers it", onPress: () => startVoice() },
     { key: "note", icon: "note", tint: "#0E7490", title: "Note", sub: "Type what you don't want to forget", onPress: () => setNoteMode(true) },
-    { key: "library", icon: "upload", tint: "#10B981", title: "Choose from Library", sub: "Already have the photo?", onPress: () => pickFromLibrary() },
+    { key: "library", icon: "album", tint: "#10B981", title: "Choose from Library", sub: "Already have the photo?", onPress: () => pickFromLibrary() },
   ];
 
   return (
