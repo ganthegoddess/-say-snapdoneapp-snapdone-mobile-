@@ -4,6 +4,7 @@ import {
   Platform, ActionSheetIOS, Alert, ActivityIndicator, Linking,
 } from "react-native";
 import { router } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { useAudioRecorder, useAudioRecorderState, setAudioModeAsync, requestRecordingPermissionsAsync, RecordingPresets } from "expo-audio";
 import { colors } from "../../constants/colors";
@@ -13,6 +14,18 @@ import { trackEvent } from "../../lib/posthog";
 import { isUpgradeRequired } from "../../hooks/useCapture";
 import { Icon } from "../ui/icons";
 import { pip } from "../../constants/pipCopy";
+
+/** v6 premium capture-pill fill (matches Home/onboarding + mockup_kit.tinted_pill). */
+function tintFill(base: string): [string, string] {
+  const r = parseInt(base.slice(1, 3), 16);
+  const g = parseInt(base.slice(3, 5), 16);
+  const b = parseInt(base.slice(5, 7), 16);
+  const lift = (c: number) => Math.round(c + (255 - c) * 0.34);
+  return [
+    `rgba(${lift(r)},${lift(g)},${lift(b)},0.40)`,
+    `rgba(${r},${g},${b},0.50)`,
+  ];
+}
 
 const MAX_RECORDING_SECONDS = 120; // matches backend MAX_VOICE_DURATION_MS
 const MIN_RECORDING_SECONDS = 1;
@@ -210,6 +223,20 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
     }
   }, [noteText, handleClose]);
 
+  const CAPTURE_MODES: {
+    key: string;
+    icon: "camera" | "mic" | "note" | "upload";
+    tint: string;
+    title: string;
+    sub: string;
+    onPress: () => void;
+  }[] = [
+    { key: "photo", icon: "camera", tint: "#0891B2", title: "Photo", sub: "Snap a receipt, flyer, note, or screenshot", onPress: takePhoto },
+    { key: "voice", icon: "mic", tint: "#F59E0B", title: "Voice", sub: "Say it — PIP remembers it", onPress: () => startVoice() },
+    { key: "note", icon: "note", tint: "#0E7490", title: "Note", sub: "Type what you don't want to forget", onPress: () => setNoteMode(true) },
+    { key: "library", icon: "upload", tint: "#10B981", title: "Choose from Library", sub: "Already have the photo?", onPress: () => pickFromLibrary() },
+  ];
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <Pressable style={styles.overlay} onPress={handleClose}>
@@ -266,41 +293,26 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
             </View>
           )}
 
-          {/* OPTIONS (shown when not in voice/note mode) */}
+          {/* OPTIONS (shown when not in voice/note mode) — premium tinted mode pills */}
           {!voiceMode && !noteMode && (
             <>
-              <TouchableOpacity style={styles.sheetOption} onPress={takePhoto}>
-                <View style={styles.sheetIconWrap}><Icon name="camera" size={24} color={colors.brand.primary} /></View>
-                <View style={styles.optionBody}>
-                  <Text style={styles.sheetText}>Photo</Text>
-                  <Text style={styles.sheetSub}>Snap a receipt, flyer, note, or screenshot</Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sheetOption} onPress={startVoice}>
-                <View style={styles.sheetIconWrap}><Icon name="mic" size={24} color={colors.accent.warm} /></View>
-                <View style={styles.optionBody}>
-                  <Text style={styles.sheetText}>Voice</Text>
-                  <Text style={styles.sheetSub}>Say it — PIP remembers it</Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sheetOption} onPress={() => setNoteMode(true)}>
-                <View style={styles.sheetIconWrap}><Icon name="note" size={24} color={colors.brand.dark} /></View>
-                <View style={styles.optionBody}>
-                  <Text style={styles.sheetText}>Note</Text>
-                  <Text style={styles.sheetSub}>Type what you don't want to forget</Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sheetOption} onPress={pickFromLibrary}>
-                <View style={styles.sheetIconWrap}><Icon name="upload" size={24} color={colors.text.muted} /></View>
-                <View style={styles.optionBody}>
-                  <Text style={styles.sheetText}>Choose from Library</Text>
-                  <Text style={styles.sheetSub}>Already have the photo?</Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </TouchableOpacity>
+              {CAPTURE_MODES.map((m) => (
+                <TouchableOpacity key={m.key} style={styles.sheetOptionShadow} onPress={m.onPress} activeOpacity={0.85}>
+                  <LinearGradient
+                    colors={tintFill(m.tint)}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={styles.sheetOptionPill}
+                  >
+                    <Icon name={m.icon} size={26} color={m.tint} />
+                    <View style={styles.optionBody}>
+                      <Text style={styles.sheetText}>{m.title}</Text>
+                      <Text style={styles.sheetSub}>{m.sub}</Text>
+                    </View>
+                    <Text style={styles.sheetChevron}>›</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))}
             </>
           )}
 
@@ -317,12 +329,27 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(15,23,42,0.55)", justifyContent: "flex-end" },
   sheet: { backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
   sheetTitle: { fontSize: 18, fontWeight: "800", color: colors.deep, marginBottom: 16, textAlign: "center" },
-  sheetOption: { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12 },
-  sheetIconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: colors.brand.light },
+  sheetOptionShadow: {
+    borderRadius: 22,
+    marginBottom: 14,
+    shadowColor: "#0F2A33",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  sheetOptionPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    borderRadius: 22,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
   optionBody: { flex: 1 },
-  sheetText: { fontSize: 17, color: colors.deep, fontWeight: "700" },
+  sheetText: { fontSize: 17, color: colors.ink, fontWeight: "800" },
   sheetSub: { fontSize: 13, color: colors.text.muted, marginTop: 2 },
-  chevron: { fontSize: 22, color: colors.text.muted },
+  sheetChevron: { fontSize: 20, color: colors.text.muted, fontWeight: "700" },
   sheetCancel: { marginTop: 16, paddingVertical: 14, alignItems: "center", backgroundColor: colors.surface, borderRadius: 12 },
   sheetCancelText: { fontSize: 16, color: colors.text.muted, fontWeight: "600" },
   // Voice

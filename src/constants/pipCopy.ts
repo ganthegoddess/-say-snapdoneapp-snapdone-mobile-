@@ -53,10 +53,13 @@ export const pip = {
 }
 
 // ── Home capture actions — THREE ONLY (DESIGN-SYSTEM §7.4 / §6.2) ──
+// Each is a premium filled tinted pill: soft vertical gradient (lighter tint top →
+// deeper tint bottom), no outline, heavy tint icon + INK label centred as ONE unit.
+// tints = TEAL (snap) / AMBER (tell) / EMERALD (type) — matches v6 mockup_kit.
 export const HOME_CAPTURE_ACTIONS = [
-  { key: "snap", label: "Snap something", icon: "camera", route: "/capture", hint: "Photo / receipt / flyer" },
-  { key: "tell", label: "Tell me", icon: "mic", route: "voice", hint: "A voice note — just speak" },
-  { key: "type", label: "Type it", icon: "note", route: "note", hint: "A thought, a list, anything" },
+  { key: "snap", label: "Snap something", icon: "camera", route: "/capture", hint: "Photo / receipt / flyer", tint: "#0891B2" },
+  { key: "tell", label: "Tell me", icon: "mic", route: "voice", hint: "A voice note — just speak", tint: "#F59E0B" },
+  { key: "type", label: "Type it", icon: "note", route: "note", hint: "A thought, a list, anything", tint: "#10B981" },
 ] as const;
 
 // ── Home "evolves with the relationship" greeting ladder (DESIGN-SYSTEM §7.1) ──
