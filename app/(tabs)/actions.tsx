@@ -52,7 +52,7 @@ export default function ActionsScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Memory Vault</Text>
-          <Text style={styles.subtitle}>Everything you've trusted PIP with.</Text>
+          <Text style={styles.subtitle}>I've got everything you've trusted me with.</Text>
         </View>
         {/*
           Search/retrieval route (ask-pip) is feature-flagged off during beta.

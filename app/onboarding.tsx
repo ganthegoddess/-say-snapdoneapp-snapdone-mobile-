@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-nati
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { colors } from "../src/constants/colors";
-import { PipBadge } from "../src/components/ui/PipBadge";
+import { PipWisp } from "../src/components/PipWisp";
 import { BrandGradient } from "../src/components/ui/BrandGradient";
 import { Icon } from "../src/components/ui/icons";
 import { useAuthStore } from "../src/stores/authStore";
@@ -38,7 +38,7 @@ export default function OnboardingScreen() {
     >
       {/* Canonical PIP — the first thing a user meets (DESIGN-SYSTEM §7.5) */}
       <View style={styles.pipArea}>
-        <PipBadge size={120} />
+        <PipWisp state="idle" position="center-screen" size={132} background="light" />
       </View>
 
       <Text style={styles.greeting}>
@@ -47,7 +47,8 @@ export default function OnboardingScreen() {
         })}
       </Text>
       <Text style={styles.subtitle}>
-        Snap a photo, a voice note, or a thought — I'll remember it for you.
+        Give me anything — a photo, a note,
+        {"\n"}a voice. I'll remember it for you.
       </Text>
       <Text style={styles.gotIt}>{pip.captureSheet.confirm}</Text>
 
@@ -87,10 +88,10 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   content: { alignItems: "center", paddingHorizontal: 28, paddingTop: 80, paddingBottom: 48 },
-  pipArea: { marginBottom: 24 },
-  greeting: { fontSize: 26, fontWeight: "800", color: colors.deep, textAlign: "center", marginBottom: 10 },
-  subtitle: { fontSize: 16, color: colors.text.primary, textAlign: "center", lineHeight: 24, paddingHorizontal: 8 },
-  gotIt: { fontSize: 15, color: colors.accent.warm, fontWeight: "700", marginTop: 10, textAlign: "center" },
+  pipArea: { marginBottom: 20, height: 132, alignItems: "center" },
+  greeting: { fontSize: 32, fontWeight: "800", color: colors.ink, textAlign: "center", marginBottom: 12 },
+  subtitle: { fontSize: 17, color: colors.muted, textAlign: "center", lineHeight: 26, paddingHorizontal: 8 },
+  gotIt: { fontSize: 22, color: colors.accent.amberDeep, fontWeight: "800", marginTop: 12, textAlign: "center" },
   captureStack: { width: "100%", marginTop: 32, gap: 14 },
   captureAction: {
     borderRadius: 28,

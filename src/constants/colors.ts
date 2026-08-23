@@ -20,6 +20,7 @@ export const colors = {
   accent: {
     complete: "#10B981", // emerald-500 — "done", completed memory, positive
     warm:     "#F59E0B", // amber-500  — PIP moments, milestones, SnapBack highlights
+    amberDeep:"#D97706", // AMBER_DEEP — the ONE colourized PIP voice "I've got it." (§6.4)
   },
   // ── Warm / cream tones (website warmth) ──
   warm: {
@@ -35,7 +36,7 @@ export const colors = {
   surface:  "#F8FAFC", // slate-50   — primary warm-white screen background
   white:    "#FFFFFF",
   text: {
-    primary: "#1E293B", // slate-800
+    primary: "#0F2A33", // body reads INK (owner v6 §6.4)
     muted:   "#5B6B72", // MUTED — body / secondary copy (owner v6)
     onGradient: "#FFFFFF",
   },
