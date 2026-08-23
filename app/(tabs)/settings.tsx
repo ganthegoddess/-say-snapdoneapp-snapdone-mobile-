@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 15, marginRight: 12,
     backgroundColor: colors.brand.light, alignItems: "center", justifyContent: "center",
   },
-  rowLabelComingSoon: { fontSize: 13, color: colors.warm.amber, fontWeight: "600" },
+  rowLabelComingSoon: { fontSize: 13, color: colors.text.muted, fontWeight: "600" },
   // Upgrade card
   upgradeCard: {
     flexDirection: "row", alignItems: "center", gap: 12,

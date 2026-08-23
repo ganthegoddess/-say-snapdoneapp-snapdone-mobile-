@@ -321,8 +321,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, color: colors.text.muted, marginBottom: 24, lineHeight: 22 },
   inviteCard: { backgroundColor: colors.brand.light, borderRadius: 16, padding: 24, alignItems: "center", marginBottom: 24, borderWidth: 1, borderColor: colors.brand.primary },
   gateIconChip: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.brand.light, alignItems: "center", justifyContent: "center", marginBottom: 12 },
-  inviteTitle: { fontSize: 18, fontWeight: "700", color: colors.brand.dark, marginBottom: 8 },
-  inviteText: { fontSize: 14, color: colors.brand.dark, textAlign: "center", marginBottom: 16, lineHeight: 20 },
+  inviteTitle: { fontSize: 18, fontWeight: "700", color: colors.ink, marginBottom: 8 },
+  inviteText: { fontSize: 14, color: colors.text.muted, textAlign: "center", marginBottom: 16, lineHeight: 20 },
   // Paid gate
   gateContainer: { paddingVertical: 60, paddingHorizontal: 8, alignItems: "center" },
 
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     borderColor: colors.brand.primary + "30",
     marginBottom: 8,
   },
-  inviteCounterText: { fontSize: 13, color: colors.brand.dark, fontWeight: "600" },
+  inviteCounterText: { fontSize: 13, color: colors.text.muted, fontWeight: "600" },
 
   sectionTitle: { fontSize: 18, fontWeight: "700", color: colors.deep, marginBottom: 12 },
   emptyState: { backgroundColor: colors.white, borderRadius: 12, padding: 32, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderStyle: "dashed" },
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   memberName: { fontSize: 15, fontWeight: "600", color: colors.deep },
   memberRole: { fontSize: 13, color: colors.text.muted, marginTop: 2 },
   adminBadge: { backgroundColor: colors.accent.complete + "20", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  adminBadgeText: { fontSize: 12, fontWeight: "600", color: colors.accent.complete },
+  adminBadgeText: { fontSize: 12, fontWeight: "600", color: colors.text.muted },
 
   // ── Feed section ──
   feedHeaderRow: {

@@ -259,7 +259,7 @@ export default function HomeScreen() {
           {HOME_CAPTURE_ACTIONS.map((a) => (
             <TouchableOpacity key={a.key} style={styles.captureAction} onPress={() => handleCaptureAction(a.key)} activeOpacity={0.8}>
               <View style={styles.captureIconWrap}>
-                <Icon name={a.icon} size={26} color={colors.brand.primary} />
+                <Icon name={a.icon} size={28} color={colors.brand.primary} />
               </View>
               <Text style={styles.captureActionLabel}>{a.label}</Text>
               <Icon name="chevronRight" size={20} color={colors.text.muted} />
@@ -400,8 +400,8 @@ const styles = StyleSheet.create({
   },
   greetingBlock: { alignItems: "center", paddingTop: 8 },
   pipHero: { marginBottom: 12, alignItems: "center" },
-  greeting: { fontSize: 15, color: colors.brand.dark, fontWeight: "600", textAlign: "center" },
-  headline: { fontSize: 26, fontWeight: "800", color: colors.deep, marginTop: 6, lineHeight: 33, textAlign: "center", paddingHorizontal: 8 },
+  greeting: { fontSize: 15, color: colors.ink, fontWeight: "600", textAlign: "center" },
+  headline: { fontSize: 26, fontWeight: "800", color: colors.text.muted, marginTop: 6, lineHeight: 33, textAlign: "center", paddingHorizontal: 8 },
   // Stacked capture actions (DESIGN-SYSTEM §7.4) — full-width, inline premium icon
   captureStack: { marginTop: 20, gap: 12 },
   captureAction: {
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   pipHeaderTitle: { flexDirection: "row", alignItems: "center", gap: 8 },
-  pipTitle: { fontSize: 16, fontWeight: "700", color: colors.accent.warm },
+  pipTitle: { fontSize: 16, fontWeight: "700", color: colors.ink },
   pipDismiss: { fontSize: 16, color: colors.text.muted, fontWeight: "700", paddingHorizontal: 4 },
 
   // Memory card

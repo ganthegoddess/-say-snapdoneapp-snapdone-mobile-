@@ -42,7 +42,7 @@ export interface IconProps {
 }
 
 const S = 24; // viewBox grid
-const W = 1.5; // consistent stroke width (rounded, friendly)
+const W = 4; // HEAVY custom stroke (~0.17×s) — owner v6 (was 1.5 / 0.12×s thin line work)
 
 function stroke(color: string) {
   return {
@@ -58,25 +58,29 @@ function stroke(color: string) {
 /** Glyph path map — one implementation per glyph. */
 export const ICON_PATHS: Record<IconName, (c: string, k: number) => React.ReactNode> = {
   mic: (c, k) => (
+    // VOICE — chunky rounded capsule + stand + base + pickup arc (owner v6 heavy)
     <G {...stroke(c)} key={k}>
-      <Rect x={9} y={3} width={6} height={11} rx={3} />
-      <Path d="M5 11a7 7 0 0 0 14 0" />
-      <Line x1={12} y1={18} x2={12} y2={21} />
-      <Line x1={8} y1={21} x2={16} y2={21} />
+      <Rect x={8.7} y={2.8} width={6.6} height={13.2} rx={3.3} />
+      <Line x1={12} y1={16} x2={12} y2={19.4} />
+      <Line x1={7.8} y1={19.4} x2={16.2} y2={19.4} />
+      <Path d="M8.7 15.6a3.3 4 0 0 0 6.6 0" />
     </G>
   ),
   camera: (c, k) => (
+    // SNAP — chunky camera: rounder body + big lens + top bump (owner v6 heavy)
     <G {...stroke(c)} key={k}>
-      <Path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
-      <Circle cx={12} cy={13} r={3.4} />
+      <Rect x={3.4} y={6.2} width={17.2} height={13.2} rx={3.6} />
+      <Circle cx={12} cy={12.4} r={4} />
+      <Path d="M8 6.4V4.9A1.5 1.5 0 0 1 9.5 3.4h5A1.5 1.5 0 0 1 16 4.9v1.5" />
     </G>
   ),
   note: (c, k) => (
+    // TYPE IT — chunky upright pencil: barrel + eraser top + wood tip (owner v6 heavy)
     <G {...stroke(c)} key={k}>
-      <Rect x={4} y={3} width={16} height={18} rx={2} />
-      <Line x1={8} y1={8} x2={16} y2={8} />
-      <Line x1={8} y1={12} x2={16} y2={12} />
-      <Line x1={8} y1={16} x2={13} y2={16} />
+      <Rect x={8.4} y={2.8} width={7.2} height={12.8} rx={1.9} />
+      <Rect x={8.4} y={2.8} width={7.2} height={3.4} rx={1.6} />
+      <Line x1={8.4} y1={15.6} x2={12} y2={21.2} />
+      <Line x1={15.6} y1={15.6} x2={12} y2={21.2} />
     </G>
   ),
   upload: (c, k) => (
