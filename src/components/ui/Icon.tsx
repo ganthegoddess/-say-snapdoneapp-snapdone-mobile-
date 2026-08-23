@@ -29,7 +29,9 @@ export type IconName =
   | "household"
   | "home"
   | "vault"
-  | "settings";
+  | "settings"
+  | "mail"
+  | "sparkle";
 
 export interface IconProps {
   name: IconName;
@@ -181,6 +183,18 @@ export const ICON_PATHS: Record<IconName, (c: string, k: number) => React.ReactN
     <G {...stroke(c)} key={k}>
       <Circle cx={12} cy={12} r={3} />
       <Path d="M12 2.5v2M12 19.5v2M19.5 12h-2M6.5 12h-2M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4M17.7 17.7l-1.4-1.4M7.7 7.7 6.3 6.3" />
+    </G>
+  ),
+  mail: (c, k) => (
+    <G {...stroke(c)} key={k}>
+      <Rect x={3} y={5} width={18} height={14} rx={2} />
+      <Polyline points="3 7 12 13 21 7" />
+    </G>
+  ),
+  sparkle: (c, k) => (
+    <G {...stroke(c)} key={k}>
+      <Path d="M12 3v5M12 16v5M3 12h5M16 12h5" />
+      <Path d="M7.5 7.5l1 1M15.5 15.5l1 1M7.5 16.5l1-1M15.5 8.5l1-1" />
     </G>
   ),
 };

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { router } from "expo-router";
 import { colors } from "../../src/constants/colors";
 import { Button } from "../../src/components/ui/Button";
+import { Icon } from "../../src/components/ui/icons";
 import { ActionCard } from "../../src/components/actions/ActionCard";
 import { useHouseholds, useCreateHousehold, useLeaveHousehold, useHousehold } from "../../src/hooks/useHouseholds";
 import { useSubscription } from "../../src/hooks/useSubscription";
@@ -116,7 +117,7 @@ export default function HouseholdScreen() {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.gateContainer} showsVerticalScrollIndicator={false}>
-          <Text style={styles.gateEmoji}>👨‍👩‍👧‍👦</Text>
+          <View style={styles.gateIconChip}><Icon name="household" size={40} color={colors.text.muted} /></View>
           <Text style={styles.gateTitle}>Household is a paid feature</Text>
           <Text style={styles.gateText}>
             Share memories, lists, and reminders with up to {memberLimit} people. Upgrade to Household to start your family's shared memory vault.
@@ -135,7 +136,7 @@ export default function HouseholdScreen() {
         <>
           {!showCreateForm ? (
             <View style={styles.inviteCard}>
-              <Text style={styles.inviteIcon}>👨‍👩‍👧‍👦</Text>
+              <View style={styles.gateIconChip}><Icon name="household" size={36} color={colors.text.muted} /></View>
               <Text style={styles.inviteTitle}>Start your household</Text>
               <Text style={styles.inviteText}>
                 Share grocery lists, chores, reminders, and events with up to {memberLimit} family members. One household per subscription.
@@ -153,7 +154,7 @@ export default function HouseholdScreen() {
             </View>
           ) : (
             <View style={styles.inviteCard}>
-              <Text style={styles.inviteIcon}>🏠</Text>
+              <View style={styles.gateIconChip}><Icon name="home" size={32} color={colors.text.muted} /></View>
               <Text style={styles.inviteTitle}>Name your household</Text>
               <TextInput
                 style={styles.input}
@@ -180,7 +181,7 @@ export default function HouseholdScreen() {
       ) : (
         <>
           <View style={styles.inviteCard}>
-            <Text style={styles.inviteIcon}>👨‍👩‍👧‍👦</Text>
+            <View style={styles.gateIconChip}><Icon name="household" size={32} color={colors.text.muted} /></View>
             <Text style={styles.inviteTitle}>{activeHousehold.name}</Text>
             <Text style={styles.inviteText}>
               {members.length} of {memberLimit} members • Invite code: {activeHousehold.invite_code}
@@ -269,7 +270,7 @@ export default function HouseholdScreen() {
                       </View>
                     ) : feedActions.length === 0 ? (
                       <View style={styles.feedEmpty}>
-                        <Text style={styles.feedEmptyIcon}>📭</Text>
+                        <View style={styles.feedEmptyIcon}><Icon name="vault" size={26} color={colors.text.muted} /></View>
                         <Text style={styles.feedEmptyTitle}>No shared memories yet</Text>
                         <Text style={styles.feedEmptySubtext}>
                           When someone shares a memory with the household, it will appear here.
@@ -319,12 +320,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: "800", color: colors.deep, marginBottom: 4 },
   subtitle: { fontSize: 15, color: colors.text.muted, marginBottom: 24, lineHeight: 22 },
   inviteCard: { backgroundColor: colors.brand.light, borderRadius: 16, padding: 24, alignItems: "center", marginBottom: 24, borderWidth: 1, borderColor: colors.brand.primary },
-  inviteIcon: { fontSize: 40, marginBottom: 12 },
+  gateIconChip: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.brand.light, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   inviteTitle: { fontSize: 18, fontWeight: "700", color: colors.brand.dark, marginBottom: 8 },
   inviteText: { fontSize: 14, color: colors.brand.dark, textAlign: "center", marginBottom: 16, lineHeight: 20 },
   // Paid gate
   gateContainer: { paddingVertical: 60, paddingHorizontal: 8, alignItems: "center" },
-  gateEmoji: { fontSize: 48, marginBottom: 16 },
+
   gateTitle: { fontSize: 22, fontWeight: "800", color: colors.deep, textAlign: "center", marginBottom: 10 },
   gateText: { fontSize: 15, color: colors.text.muted, textAlign: "center", lineHeight: 22, marginBottom: 24, paddingHorizontal: 8 },
   input: { width: "100%", backgroundColor: colors.white, borderRadius: 10, padding: 14, fontSize: 16, color: colors.deep, borderWidth: 1, borderColor: colors.border, marginBottom: 16 },
@@ -395,8 +396,7 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   feedEmptyIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+    width: 52, height: 52, borderRadius: 26, backgroundColor: colors.brand.light, alignItems: "center", justifyContent: "center", marginBottom: 10,
   },
   feedEmptyTitle: {
     fontSize: 15,

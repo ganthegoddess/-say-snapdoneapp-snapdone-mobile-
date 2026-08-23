@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { colors } from "../../src/constants/colors";
 import { useAuthStore } from "../../src/stores/authStore";
 import { BrandGradient } from "../../src/components/ui/BrandGradient";
+import { Icon } from "../../src/components/ui/icons";
 import { Avatar } from "../../src/components/ui/Avatar";
 import { useLocationStore } from "../../src/stores/locationStore";
 import { useSubscription } from "../../src/hooks/useSubscription";
@@ -70,7 +71,7 @@ export default function SettingsScreen() {
             </View>
           </View>
           <View style={[styles.row, styles.rowBorder]}>
-            <Text style={styles.rowIcon}>📧</Text>
+            <View style={styles.iconChip}><Icon name="mail" size={16} color={colors.brand.primary} /></View>
             <Text style={styles.rowLabel}>Email</Text>
             <Text style={styles.rowValue}>{user?.email || "—"}</Text>
           </View>
@@ -82,19 +83,19 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>PIP</Text>
         <View style={styles.card}>
           <View style={[styles.row, styles.rowBorder]}>
-            <Text style={styles.rowIcon}>✨</Text>
+            <View style={styles.iconChip}><Icon name="sparkle" size={16} color={colors.warm.amber} /></View>
             <View style={styles.rowTextStack}>
               <Text style={styles.rowLabel}>PIP Recognition accuracy</Text>
               <Text style={styles.rowSub}>PIP gets better at reading your handwriting and voice the more you use it.</Text>
             </View>
           </View>
           <View style={[styles.row, styles.rowBorder]}>
-            <Text style={styles.rowIcon}>🎙️</Text>
+            <View style={styles.iconChip}><Icon name="mic" size={16} color={colors.brand.primary} /></View>
             <Text style={styles.rowLabel}>Voice & Transcriptions</Text>
             <Text style={styles.rowLabelComingSoon}>Coming Soon</Text>
           </View>
           <View style={[styles.row]}>
-            <Text style={styles.rowIcon}>🔔</Text>
+            <View style={styles.iconChip}><Icon name="notifications" size={16} color={colors.brand.primary} /></View>
             <Text style={styles.rowLabel}>Location-based reminders</Text>
             <Switch
               value={locationRemindersEnabled}
@@ -114,9 +115,9 @@ export default function SettingsScreen() {
             style={[styles.row]}
             onPress={() => router.push("/(tabs)/household")}
           >
-            <Text style={styles.rowIcon}>👨‍👩‍👧‍👦</Text>
+            <View style={styles.iconChip}><Icon name="household" size={16} color={colors.brand.primary} /></View>
             <Text style={styles.rowLabel}>Manage Household</Text>
-            <Text style={styles.rowChevron}>›</Text>
+            <Icon name="chevron" size={18} color={colors.text.muted} />
           </TouchableOpacity>
         </View>
       </View>
@@ -126,7 +127,7 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Subscription</Text>
         <TouchableOpacity onPress={() => router.push("/paywall")}>
           <BrandGradient style={styles.upgradeCard} rounded={14}>
-            <Text style={styles.upgradeIcon}>⭐</Text>
+            <View style={styles.upgradeIconChip}><Icon name="sparkle" size={18} color="#FFFFFF" /></View>
             <View style={styles.upgradeInfo}>
               <Text style={styles.upgradeTitle}>{tierInfo.title}</Text>
               <Text style={styles.upgradeText}>{tierInfo.sub}</Text>
@@ -134,7 +135,7 @@ export default function SettingsScreen() {
                 {tier ? "Unlimited memories" : `${usageCount} / ${FREE_TIER.MAX_CAPTURES_PER_MONTH} memories this month`}
               </Text>
             </View>
-            <Text style={styles.upgradeChevron}>›</Text>
+            <Icon name="chevron" size={18} color="rgba(255,255,255,0.85)" />
           </BrandGradient>
         </TouchableOpacity>
       </View>
@@ -149,11 +150,11 @@ export default function SettingsScreen() {
           </View>
           <TouchableOpacity style={[styles.row, styles.rowBorder]} onPress={openTerms}>
             <Text style={styles.rowLabel}>Terms of Service</Text>
-            <Text style={styles.rowChevron}>›</Text>
+            <Icon name="chevron" size={18} color={colors.text.muted} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.row]} onPress={openPrivacy}>
             <Text style={styles.rowLabel}>Privacy Policy</Text>
-            <Text style={styles.rowChevron}>›</Text>
+            <Icon name="chevron" size={18} color={colors.text.muted} />
           </TouchableOpacity>
         </View>
       </View>
@@ -187,22 +188,26 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1 },
   profileName: { fontSize: 17, fontWeight: "700", color: colors.deep },
   profileEmail: { fontSize: 13, color: colors.text.muted, marginTop: 2 },
-  rowIcon: { fontSize: 18, marginRight: 10 },
   rowLabel: { fontSize: 15, color: colors.text.primary, flex: 1 },
   rowValue: { fontSize: 15, color: colors.text.muted },
-  rowChevron: { fontSize: 20, color: colors.text.muted },
+  iconChip: {
+    width: 30, height: 30, borderRadius: 15, marginRight: 12,
+    backgroundColor: colors.brand.light, alignItems: "center", justifyContent: "center",
+  },
   rowLabelComingSoon: { fontSize: 13, color: colors.warm.amber, fontWeight: "600" },
   // Upgrade card
   upgradeCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
     padding: 18, marginBottom: 8,
   },
-  upgradeIcon: { fontSize: 24 },
+  upgradeIconChip: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center",
+  },
   upgradeInfo: { flex: 1 },
   upgradeTitle: { fontSize: 17, fontWeight: "700", color: "#FFFFFF" },
   upgradeText: { fontSize: 13, color: "rgba(255,255,255,0.92)", marginTop: 2 },
   usageText: { fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 4 },
-  upgradeChevron: { fontSize: 22, color: "#FFFFFF", fontWeight: "600" },
   // Sign out
   signOutButton: {
     backgroundColor: colors.white,
