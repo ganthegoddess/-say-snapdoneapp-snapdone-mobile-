@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   unshareNoticeText: {
     flex: 1,
     fontSize: 13,
-    color: colors.accent.warm,
+    color: colors.text.muted,
     lineHeight: 18,
     fontWeight: "500",
   },

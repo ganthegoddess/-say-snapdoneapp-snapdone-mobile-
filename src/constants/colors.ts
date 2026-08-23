@@ -29,15 +29,18 @@ export const colors = {
     cream2: "#FFE0B0", // deep cream — SnapBack callout bg, celebrating
     pipGlow:"#FFF5D8", // warm ivory — PIP glow field (mirrors PipWisp)
   },
-  // ── Neutrals ──
-  deep:     "#0F172A", // slate-900  — titles, dark text, hero-on-light
+  // ── Neutrals (v6 text-colour policy §6.4: TWO colours + ONE PIP voice) ──
+  ink:      "#0F2A33", // INK  — headings / titles (owner v6)
+  deep:     "#0F2A33", // alias of INK (kept for existing heading styles)
   surface:  "#F8FAFC", // slate-50   — primary warm-white screen background
   white:    "#FFFFFF",
   text: {
     primary: "#1E293B", // slate-800
-    muted:   "#64748B", // slate-500
+    muted:   "#5B6B72", // MUTED — body / secondary copy (owner v6)
     onGradient: "#FFFFFF",
   },
+  // MUTED alias — body / secondary copy (owner v6)
+  muted:    "#5B6B72",
   // NOTE: `border` is offered BOTH as a flat string (legacy alias used across
   // existing screens) and as an object with light/brand tokens. The flat
   // string equals border.light. Keeps the whole app on one file (single source).

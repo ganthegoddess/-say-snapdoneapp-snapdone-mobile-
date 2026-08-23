@@ -1,19 +1,28 @@
 // ─────────────────────────────────────────────────────────────
-// SnapDone Mobile — custom outlined icon set (DESIGN-SYSTEM §2)
-// One custom outlined set drawn to a single grid: 1.5px stroke,
-// round line caps/joins, friendly rounded corners — NEVER emojis.
-// Single source (Code Hygiene): every glyph lives here + icons.ts.
-// Color is single-tint by context (teal primary/active, muted
-// slate inactive, white on gradient).
+// SnapDone Mobile — custom icon set (DESIGN-SYSTEM §2)
+// Two families, single source (Code Hygiene: every glyph here +
+// icons.ts), single tint by context (teal primary, muted inactive,
+// white on gradient) — NEVER emojis.
+//   • PREMIUM FILLED (owner v6.1, the definitive icon language):
+//     solid refined glyph silhouettes — camera (Snap), mic
+//     (Tell me), pencil (Type it), album (Library), upload
+//     (capture only), household (four-person). Confident mass,
+//     crisp edges, balanced negative-space cuts. NOT thin, NOT
+//     heavy/chunky, NOT hand-drawn. Rendered ~0.73×h.
+//   • CUSTOM OUTLINED (general UI): 1.5px stroke, round
+//     caps/joins, friendly rounded corners (search, chevron,
+//     close, check, plus, share, warning, privacy, storage,
+//     notifications, home, vault, settings, mail, sparkle).
 // ─────────────────────────────────────────────────────────────
 import React from "react";
-import Svg, { Path, Circle, Rect, Line, Polyline, Ellipse, G } from "react-native-svg";
+import Svg, { Path, Circle, Rect, Line, Polyline, Ellipse, Polygon, G } from "react-native-svg";
 import type { ViewStyle, StyleProp } from "react-native";
 
 export type IconName =
   | "mic"
   | "camera"
   | "note"
+  | "album"
   | "upload"
   | "search"
   | "chevron"
@@ -29,7 +38,9 @@ export type IconName =
   | "household"
   | "home"
   | "vault"
-  | "settings";
+  | "settings"
+  | "mail"
+  | "sparkle";
 
 export interface IconProps {
   name: IconName;
@@ -40,7 +51,9 @@ export interface IconProps {
 }
 
 const S = 24; // viewBox grid
-const W = 1.5; // consistent stroke width (rounded, friendly)
+// Custom OUTLINED general-UI stroke weight (DESIGN-SYSTEM §2: 1.5px / 0.12×s,
+// round caps/joins). Premium capture/affordance glyphs are FILLED (see below).
+const W = 1.5;
 
 function stroke(color: string) {
   return {
@@ -55,33 +68,50 @@ function stroke(color: string) {
 
 /** Glyph path map — one implementation per glyph. */
 export const ICON_PATHS: Record<IconName, (c: string, k: number) => React.ReactNode> = {
+  // ── PREMIUM FILLED set (owner v6.1) ────────────────────────────
   mic: (c, k) => (
-    <G {...stroke(c)} key={k}>
-      <Rect x={9} y={3} width={6} height={11} rx={3} />
-      <Path d="M5 11a7 7 0 0 0 14 0" />
-      <Line x1={12} y1={18} x2={12} y2={21} />
-      <Line x1={8} y1={21} x2={16} y2={21} />
+    // TELL ME — refined filled microphone: capsule + stem + base
+    <G fill={c} stroke="none" key={k}>
+      <Rect x={9.4} y={5.4} width={5.2} height={8.4} rx={2.6} />
+      <Rect x={11.2} y={13.8} width={1.6} height={2.2} />
+      <Rect x={7.3} y={13.8} width={9.4} height={4.0} rx={1.8} />
     </G>
   ),
   camera: (c, k) => (
-    <G {...stroke(c)} key={k}>
-      <Path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
-      <Circle cx={12} cy={13} r={3.4} />
+    // SNAP — refined filled camera: body w/ negative-space lens ring + top bump
+    <G key={k}>
+      <Path
+        fill={c}
+        stroke="none"
+        fillRule="evenodd"
+        d="M7.7 8.4 H16.3 A2.6 2.6 0 0 1 18.9 11.0 V11.2 A2.6 2.6 0 0 1 16.3 13.8 H7.7 A2.6 2.6 0 0 1 5.1 11.2 V11.0 A2.6 2.6 0 0 1 7.7 8.4 Z M9.5 12.2 a2.5 2.5 0 1 0 5.0 0 a2.5 2.5 0 1 0 -5.0 0 Z"
+      />
+      <Polygon fill={c} stroke="none" points="10.2,8.4 10.9,6.9 13.1,6.9 13.8,8.4" />
+      <Circle cx={12} cy={12.2} r={1.0} fill={c} stroke="none" />
     </G>
   ),
   note: (c, k) => (
-    <G {...stroke(c)} key={k}>
-      <Rect x={4} y={3} width={16} height={18} rx={2} />
-      <Line x1={8} y1={8} x2={16} y2={8} />
-      <Line x1={8} y1={12} x2={16} y2={12} />
-      <Line x1={8} y1={16} x2={13} y2={16} />
+    // TYPE IT — refined filled pencil: body w/ ferrule gap + diagonal tip
+    <G fill={c} stroke="none" key={k}>
+      <Rect x={9.1} y={5.8} width={5.8} height={1.1} rx={1.0} />
+      <Rect x={9.1} y={7.5} width={5.8} height={5.9} rx={1.1} />
+      <Polygon points="9.1,13.4 14.9,13.4 12.0,18.2" />
+    </G>
+  ),
+  album: (c, k) => (
+    // LIBRARY — refined filled stacked photo frames (back + front + detail dot)
+    <G fill={c} stroke="none" key={k}>
+      <Rect x={6.5} y={8.0} width={9.5} height={5.8} rx={1.8} />
+      <Rect x={9.1} y={9.4} width={9.5} height={8.1} rx={1.8} />
+      <Circle cx={13.8} cy={12.0} r={1.3} />
     </G>
   ),
   upload: (c, k) => (
-    <G {...stroke(c)} key={k}>
-      <Path d="M12 16V5" />
-      <Polyline points="7 10 12 5 17 10" />
-      <Path d="M5 20h14" />
+    // UPLOAD (advanced/capture only) — refined filled tray + up arrow
+    <G fill={c} stroke="none" key={k}>
+      <Polygon points="12.0,6.2 8.4,11.3 15.6,11.3" />
+      <Rect x={11.2} y={10.9} width={1.6} height={4.8} />
+      <Rect x={6.2} y={15.7} width={11.6} height={2.1} rx={1.05} />
     </G>
   ),
   search: (c, k) => (
@@ -152,16 +182,18 @@ export const ICON_PATHS: Record<IconName, (c: string, k: number) => React.ReactN
     </G>
   ),
   household: (c, k) => (
-    // premium four-person glyph (adults center, children sides) — grayscale tint
-    <G {...stroke(c)} key={k}>
-      <Circle cx={9.5} cy={7.5} r={2.3} />
-      <Path d="M6.2 15.5c.6-2.3 1.7-3.2 3.3-3.2s2.7.9 3.3 3.2" />
-      <Circle cx={14.5} cy={7.5} r={2.3} />
-      <Path d="M11.2 15.5c.6-2.3 1.7-3.2 3.3-3.2s2.7.9 3.3 3.2" />
-      <Circle cx={5} cy={11} r={1.7} />
-      <Path d="M3.4 15.5c.3-1.4 1-2 2-2s1.7.6 2 2" />
-      <Circle cx={19} cy={11} r={1.7} />
-      <Path d="M17.4 15.5c.3-1.4 1-2 2-2s1.7.6 2 2" />
+    // HOUSEHOLD — premium filled four-person FAMILY glyph (2 adults center, child each side) — grayscale tint
+    <G fill={c} stroke="none" key={k}>
+      {/* adults (center) */}
+      <Circle cx={9.45} cy={9.1} r={2.0} />
+      <Rect x={6.7} y={9.1} width={5.5} height={2.9} rx={1.45} />
+      <Circle cx={14.55} cy={9.1} r={2.0} />
+      <Rect x={11.8} y={9.1} width={5.5} height={2.9} rx={1.45} />
+      {/* children (sides) */}
+      <Circle cx={6.5} cy={10.5} r={1.45} />
+      <Rect x={4.4} y={10.5} width={4.2} height={2.1} rx={1.05} />
+      <Circle cx={17.5} cy={10.5} r={1.45} />
+      <Rect x={15.4} y={10.5} width={4.2} height={2.1} rx={1.05} />
     </G>
   ),
   home: (c, k) => (
@@ -181,6 +213,18 @@ export const ICON_PATHS: Record<IconName, (c: string, k: number) => React.ReactN
     <G {...stroke(c)} key={k}>
       <Circle cx={12} cy={12} r={3} />
       <Path d="M12 2.5v2M12 19.5v2M19.5 12h-2M6.5 12h-2M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4M17.7 17.7l-1.4-1.4M7.7 7.7 6.3 6.3" />
+    </G>
+  ),
+  mail: (c, k) => (
+    <G {...stroke(c)} key={k}>
+      <Rect x={3} y={5} width={18} height={14} rx={2} />
+      <Polyline points="3 7 12 13 21 7" />
+    </G>
+  ),
+  sparkle: (c, k) => (
+    <G {...stroke(c)} key={k}>
+      <Path d="M12 3v5M12 16v5M3 12h5M16 12h5" />
+      <Path d="M7.5 7.5l1 1M15.5 15.5l1 1M7.5 16.5l1-1M15.5 8.5l1-1" />
     </G>
   ),
 };

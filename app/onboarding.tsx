@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { colors } from "../src/constants/colors";
 import { PipBadge } from "../src/components/ui/PipBadge";
@@ -6,6 +7,19 @@ import { BrandGradient } from "../src/components/ui/BrandGradient";
 import { Icon } from "../src/components/ui/icons";
 import { useAuthStore } from "../src/stores/authStore";
 import { pip, fill, HOME_CAPTURE_ACTIONS } from "../src/constants/pipCopy";
+
+/** v6 premium capture-pill fill (matches Home + mockup_kit.tinted_pill). */
+function tintFill(base: string): [string, string] {
+  const r = parseInt(base.slice(1, 3), 16);
+  const g = parseInt(base.slice(3, 5), 16);
+  const b = parseInt(base.slice(5, 7), 16);
+  const lift = (c: number) => Math.round(c + (255 - c) * 0.34);
+  return [
+    `rgba(${lift(r)},${lift(g)},${lift(b)},0.40)`,
+    `rgba(${r},${g},${b},0.50)`,
+  ];
+}
+
 
 export default function OnboardingScreen() {
   // A fresh sign-up already has a token — onboarding must exit into the app,
@@ -37,17 +51,22 @@ export default function OnboardingScreen() {
       </Text>
       <Text style={styles.gotIt}>{pip.captureSheet.confirm}</Text>
 
-      {/* Three capture ways — same as Home (Snap / Tell / Type) */}
+      {/* Three capture ways — same as Home (Snap / Tell / Type) — premium tinted pills */}
       <View style={styles.captureStack}>
         {HOME_CAPTURE_ACTIONS.map((a) => (
           <View key={a.key} style={styles.captureAction}>
-            <View style={styles.captureIconWrap}>
-              <Icon name={a.icon} size={24} color={colors.brand.primary} />
-            </View>
-            <View style={styles.captureText}>
-              <Text style={styles.captureLabel}>{a.label}</Text>
-              <Text style={styles.captureHint}>{a.hint}</Text>
-            </View>
+            <LinearGradient
+              colors={tintFill(a.tint)}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.capturePill}
+            >
+              <Icon name={a.icon} size={30} color={a.tint} />
+              <View style={styles.captureText}>
+                <Text style={styles.captureLabel}>{a.label}</Text>
+                <Text style={styles.captureHint}>{a.hint}</Text>
+              </View>
+            </LinearGradient>
           </View>
         ))}
       </View>
@@ -74,31 +93,23 @@ const styles = StyleSheet.create({
   gotIt: { fontSize: 15, color: colors.accent.warm, fontWeight: "700", marginTop: 10, textAlign: "center" },
   captureStack: { width: "100%", marginTop: 32, gap: 14 },
   captureAction: {
+    borderRadius: 28,
+    shadowColor: "#0F2A33",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    elevation: 5,
+  },
+  capturePill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
-    borderRadius: 16,
+    gap: 16,
+    borderRadius: 28,
     paddingVertical: 16,
-    paddingHorizontal: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.deep,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  captureIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.brand.light,
-    marginRight: 16,
+    paddingHorizontal: 20,
   },
   captureText: { flex: 1 },
-  captureLabel: { fontSize: 16, fontWeight: "700", color: colors.deep },
+  captureLabel: { fontSize: 17, fontWeight: "800", color: colors.ink },
   captureHint: { fontSize: 13, color: colors.text.muted, marginTop: 2 },
   doneWrap: { width: "100%", marginTop: 36 },
   done: { height: 56, alignItems: "center", justifyContent: "center" },

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, AppState, AppStateStatus } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import * as Calendar from "expo-calendar";
@@ -25,6 +26,23 @@ import type { RecalledMemory } from "../../src/services/memories";
 import { CaptureSheet } from "../../src/components/capture/CaptureSheet";
 
 const LOCATION_COOLDOWN = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * v6 premium capture-pill fill: soft vertical gradient from a LIGHTER tint (top) to
+ * the DEEPER brand tint (bottom) — mirrors mockup_kit.tinted_pill (top = tint lifted
+ * toward white by 0.34). Translucent alpha keeps it a light/faded brand tint per §6.3
+ * (→ dark INK label), staying premium/refined, not a heavy solid block.
+ */
+function tintFill(base: string): [string, string] {
+  const r = parseInt(base.slice(1, 3), 16);
+  const g = parseInt(base.slice(3, 5), 16);
+  const b = parseInt(base.slice(5, 7), 16);
+  const lift = (c: number) => Math.round(c + (255 - c) * 0.34);
+  return [
+    `rgba(${lift(r)},${lift(g)},${lift(b)},0.40)`,
+    `rgba(${r},${g},${b},0.50)`,
+  ];
+}
 
 const TYPE_MAP: Record<string, string> = {
   reminder: "reminder",
@@ -257,12 +275,16 @@ export default function HomeScreen() {
         {/* Stacked capture actions — Snap something / Tell me / Type it (no Upload on Home) */}
         <View style={styles.captureStack}>
           {HOME_CAPTURE_ACTIONS.map((a) => (
-            <TouchableOpacity key={a.key} style={styles.captureAction} onPress={() => handleCaptureAction(a.key)} activeOpacity={0.8}>
-              <View style={styles.captureIconWrap}>
-                <Icon name={a.icon} size={26} color={colors.brand.primary} />
-              </View>
-              <Text style={styles.captureActionLabel}>{a.label}</Text>
-              <Icon name="chevronRight" size={20} color={colors.text.muted} />
+            <TouchableOpacity key={a.key} style={styles.captureAction} onPress={() => handleCaptureAction(a.key)} activeOpacity={0.86}>
+              <LinearGradient
+                colors={tintFill(a.tint)}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={styles.capturePill}
+              >
+                <Icon name={a.icon} size={34} color={a.tint} />
+                <Text style={styles.captureActionLabel}>{a.label}</Text>
+              </LinearGradient>
             </TouchableOpacity>
           ))}
         </View>
@@ -400,35 +422,31 @@ const styles = StyleSheet.create({
   },
   greetingBlock: { alignItems: "center", paddingTop: 8 },
   pipHero: { marginBottom: 12, alignItems: "center" },
-  greeting: { fontSize: 15, color: colors.brand.dark, fontWeight: "600", textAlign: "center" },
-  headline: { fontSize: 26, fontWeight: "800", color: colors.deep, marginTop: 6, lineHeight: 33, textAlign: "center", paddingHorizontal: 8 },
-  // Stacked capture actions (DESIGN-SYSTEM §7.4) — full-width, inline premium icon
-  captureStack: { marginTop: 20, gap: 12 },
+  greeting: { fontSize: 15, color: colors.ink, fontWeight: "600", textAlign: "center" },
+  headline: { fontSize: 26, fontWeight: "800", color: colors.text.muted, marginTop: 6, lineHeight: 33, textAlign: "center", paddingHorizontal: 8 },
+  // Stacked capture actions (DESIGN-SYSTEM §7.4 / §8) — premium filled tinted pills:
+  // soft vertical gradient (lighter top → deeper tint bottom), NO outline, fully pill
+  // corners, subtle elevation so they read raised & touchable, INK label + heavy tint
+  // icon centred as ONE unit (icon left of text). Icon carries the tint colour.
+  captureStack: { marginTop: 24, gap: 14 },
   captureAction: {
+    borderRadius: 28,
+    shadowColor: "#0F2A33",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 5,
+  },
+  capturePill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.deep,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  captureIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.brand.light,
-    marginRight: 16,
+    gap: 16,
+    borderRadius: 28,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
   },
-  captureActionLabel: { flex: 1, fontSize: 16, fontWeight: "700", color: colors.deep },
+  captureActionLabel: { fontSize: 20, fontWeight: "800", color: colors.ink, letterSpacing: 0.2 },
   // PIP loading
   pipLoading: { alignItems: "center", paddingVertical: 80, paddingHorizontal: 24 },
   pipLoadingText: { fontSize: 15, color: colors.text.muted, marginTop: 4 },
@@ -463,7 +481,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   pipHeaderTitle: { flexDirection: "row", alignItems: "center", gap: 8 },
-  pipTitle: { fontSize: 16, fontWeight: "700", color: colors.accent.warm },
+  pipTitle: { fontSize: 16, fontWeight: "700", color: colors.ink },
   pipDismiss: { fontSize: 16, color: colors.text.muted, fontWeight: "700", paddingHorizontal: 4 },
 
   // Memory card
