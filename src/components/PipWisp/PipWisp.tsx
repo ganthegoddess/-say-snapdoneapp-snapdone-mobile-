@@ -53,14 +53,19 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 //  PIP Color Palette (white-background spec — designer rev 2026-07-29)
 // ──────────────────────────────────────────────
 
+// DESIGN-SYSTEM §1.4 — palette aligned to the WEBSITE (PipWeb) EXACTLY.
+// Primary glow #FCC870 · inner core #E89820 (bright #F0A838) · outer aura
+// #BFA0F0 · eye fill #FFE0B0 · pupil #B87828 · particles warm #E8C898 +
+// cool #D0B8FF. Replaces the old washed-out ivory. One PIP, one palette.
 const PIP_COLORS = {
-  primaryGlow: "#FFF5D8",       // Warm Ivory (business plan)
-  innerCore:  "#FFD98A",        // Soft Gold (business plan)
-  innerCoreBright: "#FFF0C0",   // Bright center highlight
-  outerGlow:  "#B79CFF",        // Lavender (business plan)
-  particles:  "#F9FAFF",        // Moonlight White
-  particlesCool: "#D0B8FF",     // Soft lavender (cool accent)
-  eyeFill:    "#FFE0B0",        // Bright warm tone for visibility
+  primaryGlow: "#FCC870",       // website primary glow (was washed #FFF5D8)
+  innerCore:  "#E89820",        // website inner core (was #FFD98A)
+  innerCoreBright: "#F0A838",   // website bright core pull
+  outerGlow:  "#BFA0F0",        // website outer lavender aura (was #B79CFF)
+  particles:  "#E8C898",        // website warm particle
+  particlesCool: "#D0B8FF",     // website cool lavender particle
+  eyeFill:    "#FFE0B0",        // website eye fill
+  pupil:      "#B87828",        // website eye pupil
   rim:        "rgba(160, 120, 60, 0.18)",  // Definition line — non-negotiable
   cardGlow:   "#FDB963",        // Card reflection color
 } as const;
@@ -365,6 +370,26 @@ export const PipWisp: React.FC<PipWispProps> = ({
               opacity: 0.95,
               ry: orbR * 0.2 * rightEyeSquint.value,
             }))}
+          />
+        </AnimatedG>
+
+        {/* Pupils — website #B87828, added so PIP has the canonical alive gaze */}
+        <AnimatedG
+          animatedProps={useAnimatedProps(() => ({
+            opacity: v.blink.value,
+          }))}
+        >
+          <Circle
+            cx={size / 2 - orbR * 0.38}
+            cy={size / 2 - orbR * 0.12}
+            r={orbR * 0.08}
+            fill={PIP_COLORS.pupil}
+          />
+          <Circle
+            cx={size / 2 + orbR * 0.38}
+            cy={size / 2 - orbR * 0.12}
+            r={orbR * 0.08}
+            fill={PIP_COLORS.pupil}
           />
         </AnimatedG>
 
