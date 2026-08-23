@@ -7,7 +7,6 @@ import * as Calendar from "expo-calendar";
 import { colors } from "../../src/constants/colors";
 import { ActionCard } from "../../src/components/actions/ActionCard";
 import { SnapBackCard } from "../../src/components/memories/SnapBackCard";
-import { CaptureButton } from "../../src/components/capture/CaptureButton";
 import { PipWisp } from "../../src/components/PipWisp";
 import { PipBadge } from "../../src/components/ui/PipBadge";
 import { BrandGradient } from "../../src/components/ui/BrandGradient";
@@ -255,7 +254,7 @@ export default function HomeScreen() {
         {/* Emotional checkpoint (DESIGN-SYSTEM §7): greeting ladder + PIP + stacked actions */}
         <View style={styles.greetingBlock}>
           <View style={styles.pipHero}>
-            <PipWisp state="idle" position="center-screen" size={96} background="light" />
+            <PipWisp state="idle" position="center-screen" size={132} background="light" />
           </View>
           {(() => {
             const g = greetingLine(user?.displayName, {
@@ -405,7 +404,6 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
-      <CaptureButton />
       <CaptureSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} initialMode={sheetMode} />
     </View>
   );
@@ -422,8 +420,8 @@ const styles = StyleSheet.create({
   },
   greetingBlock: { alignItems: "center", paddingTop: 8 },
   pipHero: { marginBottom: 12, alignItems: "center" },
-  greeting: { fontSize: 15, color: colors.ink, fontWeight: "600", textAlign: "center" },
-  headline: { fontSize: 26, fontWeight: "800", color: colors.text.muted, marginTop: 6, lineHeight: 33, textAlign: "center", paddingHorizontal: 8 },
+  greeting: { fontSize: 30, color: colors.ink, fontWeight: "800", textAlign: "center", lineHeight: 36 },
+  headline: { fontSize: 18, fontWeight: "600", color: colors.muted, marginTop: 8, lineHeight: 24, textAlign: "center", paddingHorizontal: 8 },
   // Stacked capture actions (DESIGN-SYSTEM §7.4 / §8) — premium filled tinted pills:
   // soft vertical gradient (lighter top → deeper tint bottom), NO outline, fully pill
   // corners, subtle elevation so they read raised & touchable, INK label + heavy tint

@@ -103,7 +103,8 @@ export function greetingLine(
   if (opts.memoryCount >= 3) {
     return {
       greeting: at,
-      reassurance: "I've got everything you've trusted me with. Share with me — I've got it.",
+      // §6.2 canonical opener — leads with SHARING, ends on the ONE voice.
+      reassurance: "Share with me — I've got it.",
       showPrompt: true,
     };
   }
@@ -111,7 +112,7 @@ export function greetingLine(
   if (opts.memoryCount >= 1) {
     return {
       greeting: at,
-      reassurance: `Thanks for trusting me with your memories. Share with me — I've got it.`,
+      reassurance: `Thanks for trusting me with your memories — share with me, I've got it.`,
       showPrompt: true,
     };
   }

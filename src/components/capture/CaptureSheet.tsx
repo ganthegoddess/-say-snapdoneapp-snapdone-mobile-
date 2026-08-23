@@ -13,7 +13,6 @@ import * as captureService from "../../services/capture";
 import { trackEvent } from "../../lib/posthog";
 import { isUpgradeRequired } from "../../hooks/useCapture";
 import { Icon } from "../ui/icons";
-import { pip } from "../../constants/pipCopy";
 
 /** v6 premium capture-pill fill (matches Home/onboarding + mockup_kit.tinted_pill). */
 function tintFill(base: string): [string, string] {
@@ -228,13 +227,12 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
     icon: "camera" | "mic" | "note" | "album" | "upload";
     tint: string;
     title: string;
-    sub: string;
     onPress: () => void;
   }[] = [
-    { key: "photo", icon: "camera", tint: "#0891B2", title: "Photo", sub: "Snap a receipt, flyer, note, or screenshot", onPress: takePhoto },
-    { key: "voice", icon: "mic", tint: "#F59E0B", title: "Voice", sub: "Say it — PIP remembers it", onPress: () => startVoice() },
-    { key: "note", icon: "note", tint: "#0E7490", title: "Note", sub: "Type what you don't want to forget", onPress: () => setNoteMode(true) },
-    { key: "library", icon: "album", tint: "#10B981", title: "Choose from Library", sub: "Already have the photo?", onPress: () => pickFromLibrary() },
+    { key: "photo", icon: "camera", tint: "#0891B2", title: "Photo", onPress: takePhoto },
+    { key: "voice", icon: "mic", tint: "#F59E0B", title: "Voice", onPress: () => startVoice() },
+    { key: "library", icon: "album", tint: "#10B981", title: "Library", onPress: () => pickFromLibrary() },
+    { key: "note", icon: "note", tint: "#0E7490", title: "Notes", onPress: () => setNoteMode(true) },
   ];
 
   return (
@@ -242,8 +240,11 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
       <Pressable style={styles.overlay} onPress={handleClose}>
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>
-            {voiceMode ? "Recording your voice note…" : pip.captureSheet.title}
+            {voiceMode ? "Recording your voice note…" : "What can I carry for you?"}
           </Text>
+          {!voiceMode && !noteMode && (
+            <Text style={styles.sheetSub}>Snap it. Say it. Type it. I've got it.</Text>
+          )}
 
           {/* VOICE recording UI */}
           {voiceMode && (
@@ -304,12 +305,8 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
                     end={{ x: 0, y: 1 }}
                     style={styles.sheetOptionPill}
                   >
-                    <Icon name={m.icon} size={26} color={m.tint} />
-                    <View style={styles.optionBody}>
-                      <Text style={styles.sheetText}>{m.title}</Text>
-                      <Text style={styles.sheetSub}>{m.sub}</Text>
-                    </View>
-                    <Text style={styles.sheetChevron}>›</Text>
+                    <Icon name={m.icon} size={30} color={m.tint} />
+                    <Text style={styles.sheetText}>{m.title}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               ))}
@@ -328,28 +325,27 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(15,23,42,0.55)", justifyContent: "flex-end" },
   sheet: { backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
-  sheetTitle: { fontSize: 18, fontWeight: "800", color: colors.deep, marginBottom: 16, textAlign: "center" },
+  sheetTitle: { fontSize: 24, fontWeight: "800", color: colors.ink, marginBottom: 8, textAlign: "center" },
+  sheetSub: { fontSize: 15, color: colors.muted, marginBottom: 16, textAlign: "center" },
   sheetOptionShadow: {
-    borderRadius: 22,
+    borderRadius: 26,
     marginBottom: 14,
     shadowColor: "#0F2A33",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.13,
+    shadowRadius: 14,
+    elevation: 5,
   },
   sheetOptionPill: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 14,
-    borderRadius: 22,
-    paddingVertical: 14,
+    borderRadius: 26,
+    paddingVertical: 20,
     paddingHorizontal: 16,
   },
-  optionBody: { flex: 1 },
-  sheetText: { fontSize: 17, color: colors.ink, fontWeight: "800" },
-  sheetSub: { fontSize: 13, color: colors.text.muted, marginTop: 2 },
-  sheetChevron: { fontSize: 20, color: colors.text.muted, fontWeight: "700" },
+  sheetText: { fontSize: 19, color: colors.ink, fontWeight: "800" },
   sheetCancel: { marginTop: 16, paddingVertical: 14, alignItems: "center", backgroundColor: colors.surface, borderRadius: 12 },
   sheetCancelText: { fontSize: 16, color: colors.text.muted, fontWeight: "600" },
   // Voice

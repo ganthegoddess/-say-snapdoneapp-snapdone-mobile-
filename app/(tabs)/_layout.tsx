@@ -2,19 +2,18 @@ import { Tabs } from "expo-router";
 import { View, Text, StyleSheet } from "react-native";
 import { colors } from "../../src/constants/colors";
 import { useSubscription } from "../../src/hooks/useSubscription";
+import { Icon } from "../../src/components/ui/icons";
 
 interface TabIconProps {
   focused: boolean;
   icon: string;
 }
-/**
- * Tab bar — premium emoji glyphs (owner-carved exception to the no-emoji
- * rule, DESIGN-SYSTEM §5 / §2): Home 🏠 · Vault 📁 · Settings ⚙️ ·
- * Household 👨‍👩‍👧‍👦. The emoji stays full-colour on BOTH states (NOT
- * monochrome dots); the ACTIVE tab label turns bold teal — calm, no bounce.
- */
 function TabIcon({ focused, icon }: TabIconProps) {
   return <Text style={[styles.emoji, focused && styles.activeEmoji]}>{icon}</Text>;
+}
+/** Four-person grayscale family glyph (Household tab) — matches executable render-kit tab_bar. */
+function HouseholdTabIcon({ focused }: { focused: boolean }) {
+  return <Icon name="household" size={24} color={focused ? colors.brand.primary : colors.text.muted} />;
 }
 
 /** Small amber "PRO" badge so the paid family tier is obvious without a dead tap. */
@@ -68,7 +67,7 @@ export default function TabLayout() {
         name="household"
         options={{
           title: "Household",
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="👨‍👩‍👧‍👦" />,
+          tabBarIcon: ({ focused }) => <HouseholdTabIcon focused={focused} />,
           tabBarBadge: isFree ? "PRO" : undefined,
           tabBarBadgeStyle: {
             backgroundColor: colors.accent.warm,
