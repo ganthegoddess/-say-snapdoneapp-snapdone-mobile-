@@ -8,7 +8,6 @@ import { colors } from "../../src/constants/colors";
 import { ActionCard } from "../../src/components/actions/ActionCard";
 import { SnapBackCard } from "../../src/components/memories/SnapBackCard";
 import { PipWisp } from "../../src/components/PipWisp";
-import { PipBadge } from "../../src/components/ui/PipBadge";
 import { BrandGradient } from "../../src/components/ui/BrandGradient";
 import { Icon } from "../../src/components/ui/icons";
 import { useActions } from "../../src/hooks/useActions";
@@ -251,10 +250,10 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, styles.homeWash]}>
-        {/* Emotional checkpoint (DESIGN-SYSTEM §7): greeting ladder + PIP + stacked actions */}
+        {/* Emotional checkpoint (DESIGN-SYSTEM §7): greeting ladder + ONE hero PIP + stacked actions */}
         <View style={styles.greetingBlock}>
           <View style={styles.pipHero}>
-            <PipWisp state="idle" position="center-screen" size={132} background="light" />
+            <PipWisp state="idle" position="center-screen" size={300} background="light" />
           </View>
           {(() => {
             const g = greetingLine(user?.displayName, {
@@ -294,10 +293,7 @@ export default function HomeScreen() {
         {showPipMemories && pipMemories.length > 0 && (
           <View style={styles.pipSection}>
             <View style={styles.pipHeader}>
-              <View style={styles.pipHeaderTitle}>
-                <PipWisp state="remembered" position="left-banner" size={28} background="light" />
-                <Text style={styles.pipTitle}>PIP remembered…</Text>
-              </View>
+              <Text style={styles.pipTitle}>PIP remembered…</Text>
               <TouchableOpacity onPress={() => setShowPipMemories(false)} hitSlop={8}>
                 <Text style={styles.pipDismiss}>✕</Text>
               </TouchableOpacity>
@@ -342,12 +338,10 @@ export default function HomeScreen() {
 
         {isLoading ? (
           <View style={styles.pipLoading}>
-            <PipWisp state="idle" position="center-screen" size={64} background="light" />
             <Text style={styles.pipLoadingText}>{pip.loading.searching}</Text>
           </View>
         ) : (actions || []).length === 0 ? (
           <View style={styles.pipEmpty}>
-            <PipBadge size={88} />
             <Text style={styles.pipEmptyTitle}>
               {fill(pip.emptyHome.title, { name: user?.displayName })}
             </Text>

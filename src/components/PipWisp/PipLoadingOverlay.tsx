@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 14,
     fontFamily: "Inter",
-    color: "#64748B",
+    color: "#5B6B72",
     textAlign: "center",
     marginTop: 8,
   },

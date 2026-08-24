@@ -19,10 +19,10 @@ export default function ListsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC", padding: 24, paddingTop: 60 },
-  title: { fontSize: 28, fontWeight: "800", color: "#0F172A", marginBottom: 4 },
-  subtitle: { fontSize: 15, color: "#64748B", marginBottom: 32 },
+  title: { fontSize: 28, fontWeight: "800", color: "#0F2A33", marginBottom: 4 },
+  subtitle: { fontSize: 15, color: "#5B6B72", marginBottom: 32 },
   emptyState: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 12, padding: 32, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#E2E8F0", borderStyle: "dashed" },
   emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyText: { fontSize: 16, fontWeight: "600", color: "#1E293B", marginBottom: 8 },
-  emptySubtext: { fontSize: 14, color: "#64748B", textAlign: "center", lineHeight: 20 },
+  emptyText: { fontSize: 16, fontWeight: "600", color: "#0F2A33", marginBottom: 8 },
+  emptySubtext: { fontSize: 14, color: "#5B6B72", textAlign: "center", lineHeight: 20 },
 });

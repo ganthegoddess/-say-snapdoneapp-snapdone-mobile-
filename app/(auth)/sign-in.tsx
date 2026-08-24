@@ -103,18 +103,18 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC", padding: 24, paddingTop: 100, justifyContent: "center" },
-  title: { fontSize: 32, fontWeight: "800", color: "#0F172A", marginBottom: 8 },
-  subtitle: { fontSize: 16, color: "#64748B", marginBottom: 32 },
+  title: { fontSize: 32, fontWeight: "800", color: "#0F2A33", marginBottom: 8 },
+  subtitle: { fontSize: 16, color: "#5B6B72", marginBottom: 32 },
   form: { gap: 16 },
-  label: { fontSize: 14, fontWeight: "600", color: "#1E293B" },
+  label: { fontSize: 14, fontWeight: "600", color: "#0F2A33" },
   forgotLink: { fontSize: 14, color: "#0891B2", fontWeight: "600", alignSelf: "flex-end", marginTop: -6 },
-  input: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 1, borderColor: "#E2E8F0", color: "#1E293B" },
+  input: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 1, borderColor: "#E2E8F0", color: "#0F2A33" },
   errorContainer: { backgroundColor: "#FEF2F2", borderRadius: 8, padding: 12, borderWidth: 1, borderColor: "#FECACA" },
   errorText: { color: "#EF4444", fontSize: 14, textAlign: "center" },
   signInButton: { backgroundColor: "#0891B2", paddingVertical: 16, borderRadius: 12, alignItems: "center", marginTop: 8 },
   buttonDisabled: { opacity: 0.6 },
   signInText: { color: "#FFFFFF", fontSize: 17, fontWeight: "700" },
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 24 },
-  footerText: { fontSize: 15, color: "#64748B" },
+  footerText: { fontSize: 15, color: "#5B6B72" },
   footerLink: { fontSize: 15, color: "#0891B2", fontWeight: "600" },
 });
