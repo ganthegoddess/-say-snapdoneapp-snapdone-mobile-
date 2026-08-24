@@ -190,10 +190,13 @@ export default function PhotoPreviewScreen() {
 
     try {
       const activeRecorder = recordingRef.current;
+      // Capture duration BEFORE stop() — expo-audio resets currentTime to 0 on
+      // stop, so reading it after would yield 0 and wrongly drop the recording
+      // ("Too short / try again"). Fall back to the elapsed second-counter.
+      const currentTimeSec = Math.round(activeRecorder.currentTime) || 0;
+      const durationSec = currentTimeSec > 0 ? currentTimeSec : recordingElapsed;
       await activeRecorder.stop();
       const uri = activeRecorder.uri;
-      // expo-audio reports currentTime in seconds
-      const durationSec = Math.round(activeRecorder.currentTime) || 0;
 
       recordingRef.current = null;
       setIsRecording(false);
@@ -227,7 +230,7 @@ export default function PhotoPreviewScreen() {
       setIsRecording(false);
       setPhase("preview");
     }
-  }, [dimAnim]);
+  }, [dimAnim, recordingElapsed]);
 
   // Keep refs in sync
   stopRecordingRef.current = stopRecording;

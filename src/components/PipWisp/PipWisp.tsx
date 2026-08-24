@@ -178,6 +178,13 @@ export interface PipWispProps {
   zIndex?: number;
   /** Background context: "dark" | "light" — affects rim rendering */
   background?: "dark" | "light";
+  /**
+   * Render PIP in-flow (position: relative) instead of absolutely-positioned
+   * overlay offsets. Used for the Home hero so it lays out centered inside its
+   * parent without the absolute top/left + fixed marginLeft offsets that were
+   * misplacing the ~300pt hero off-axis. (default: false = absolute overlay)
+   */
+  inline?: boolean;
 }
 
 // ──────────────────────────────────────────────
@@ -193,6 +200,7 @@ export const PipWisp: React.FC<PipWispProps> = ({
   onCaught,
   visible = true,
   zIndex = 100,
+  inline = false,
 }) => {
   const v = usePipAnimationValues();
   const { orbContainerStyle } = usePipStyles(v);
@@ -276,8 +284,8 @@ export const PipWisp: React.FC<PipWispProps> = ({
           width: size,
           height: size,
           zIndex,
-          position: "absolute",
-          ...pos,
+          position: inline ? "relative" : "absolute",
+          ...(inline ? {} : pos),
         },
         orbContainerStyle,
       ]}

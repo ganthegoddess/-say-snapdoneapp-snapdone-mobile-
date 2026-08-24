@@ -253,7 +253,7 @@ export default function HomeScreen() {
         {/* Emotional checkpoint (DESIGN-SYSTEM §7): greeting ladder + ONE hero PIP + stacked actions */}
         <View style={styles.greetingBlock}>
           <View style={styles.pipHero}>
-            <PipWisp state="idle" position="center-screen" size={300} background="light" />
+            <PipWisp state="idle" size={300} background="light" inline />
           </View>
           {(() => {
             const g = greetingLine(user?.displayName, {
