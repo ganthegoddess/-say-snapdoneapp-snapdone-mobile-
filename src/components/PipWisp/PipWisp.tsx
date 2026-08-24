@@ -11,10 +11,14 @@
  *
  * Authoritative spec: /home/team/shared/PIP-design-system.md
  * Business plan constraints: revision 67 — restraint over gimmicks.
+ *
+ * PIP COMPOSITING (DESIGN-SYSTEM §1.2, bn15): The character is the CANONICAL
+ * pip-300px.png composited VERBATIM — it is NEVER redrawn from primitives.
+ * The environment (aura glow, particles, sparkle) animates AROUND the asset.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View, Text } from "react-native";
+import { StyleSheet, View, Text, Image } from "react-native";
 import Svg, {
   Circle,
   Defs,
@@ -44,6 +48,14 @@ import {
   POSITION_MAP,
 } from "./animations";
 import { PipParticlesLayer } from "./PipParticles";
+
+// ──────────────────────────────────────────────
+//  Canonical PIP asset (DESIGN-SYSTEM §1.2 — composited, NEVER redrawn)
+// ──────────────────────────────────────────────
+// The character is the locked canonical PNG extracted from the website.
+// We composite it verbatim at the container size; only the environment
+// (aura glow, particles, sparkle) is drawn around it.
+const CANONICAL_PIP = require("../../assets/images/pip/pip-300px.png") as number;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedG = Animated.createAnimatedComponent(G);
@@ -277,7 +289,7 @@ export const PipWisp: React.FC<PipWispProps> = ({
         </View>
       )}
 
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={StyleSheet.absoluteFill}>
         <Defs>
           {/* Outer aura gradient (lavender, designer spec section 8.3) */}
           <RadialGradient id={glows.aura} cx="50%" cy="50%" r="50%">
@@ -285,7 +297,7 @@ export const PipWisp: React.FC<PipWispProps> = ({
             <Stop offset="50%" stopColor={PIP_COLORS.outerGlow} stopOpacity={0.1} />
             <Stop offset="100%" stopColor={PIP_COLORS.outerGlow} stopOpacity={0} />
           </RadialGradient>
-          {/* Core gradient (warm ivory → soft gold) */}
+          {/* Core gradient (warm ivory → soft gold) — kept for the glow falloff */}
           <RadialGradient id={glows.core} cx="50%" cy="40%" r="50%">
             <Stop offset="0%" stopColor={PIP_COLORS.primaryGlow} stopOpacity={1} />
             <Stop offset="45%" stopColor={PIP_COLORS.innerCore} stopOpacity={0.9} />
@@ -293,7 +305,7 @@ export const PipWisp: React.FC<PipWispProps> = ({
           </RadialGradient>
         </Defs>
 
-        {/* Layer 1: Outer aura */}
+        {/* Layer 1: Outer aura — the animated environment glow AROUND the canonical asset */}
         <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
@@ -316,102 +328,20 @@ export const PipWisp: React.FC<PipWispProps> = ({
             r: auraR * v.orbScale.value,
           }))}
         />
+      </Svg>
 
-        {/* Layer 3: Inner core */}
-        <AnimatedCircle
-          cx={size / 2}
-          cy={size / 2}
-          r={orbR}
-          fill={`url(#${glows.core})`}
-          animatedProps={useAnimatedProps(() => ({
-            opacity: v.orbOpacity.value,
-            r: orbR * v.orbScale.value,
-          }))}
-        />
+      {/* Canonical PIP character — composited VERBATIM (DESIGN-SYSTEM §1.2).
+          The locked pip-300px.png is NOT redrawn; it is the character itself.
+          The aura glow above sits behind it, particles/sparkle in front. */}
+      <Image
+        source={CANONICAL_PIP}
+        style={[styles.pipCharacter, { width: size, height: size }]}
+        resizeMode="contain"
+        fadeDuration={0}
+      />
 
-        {/* Rim definition line — non-negotiable for visibility on white */}
-        <AnimatedCircle
-          cx={size / 2}
-          cy={size / 2}
-          r={orbR + 1}
-          fill="none"
-          stroke={PIP_COLORS.rim}
-          strokeWidth={0.8}
-          animatedProps={useAnimatedProps(() => ({
-            opacity: v.orbOpacity.value,
-            r: (orbR + 1) * v.orbScale.value,
-          }))}
-        />
-
-        {/* Eyes — all animated props in useAnimatedProps (incl. cx for scan) */}
-        <AnimatedG
-          animatedProps={useAnimatedProps(() => ({
-            opacity: v.blink.value,
-          }))}
-        >
-          {/* Left eye — cx driven by eyeScanX shared value inside worklet */}
-          <AnimatedCircle
-            cy={size / 2 - orbR * 0.12}
-            fill={PIP_COLORS.eyeFill}
-            animatedProps={useAnimatedProps(() => ({
-              cx: size / 2 - orbR * 0.38 - eyeScanX.value,
-              r: orbR * 0.2,
-              opacity: 0.95,
-              ry: orbR * 0.2 * leftEyeSquint.value,
-            }))}
-          />
-          {/* Right eye */}
-          <AnimatedCircle
-            cy={size / 2 - orbR * 0.12}
-            fill={PIP_COLORS.eyeFill}
-            animatedProps={useAnimatedProps(() => ({
-              cx: size / 2 + orbR * 0.38 - eyeScanX.value,
-              r: orbR * 0.2,
-              opacity: 0.95,
-              ry: orbR * 0.2 * rightEyeSquint.value,
-            }))}
-          />
-        </AnimatedG>
-
-        {/* Pupils — website #B87828, added so PIP has the canonical alive gaze */}
-        <AnimatedG
-          animatedProps={useAnimatedProps(() => ({
-            opacity: v.blink.value,
-          }))}
-        >
-          <Circle
-            cx={size / 2 - orbR * 0.38}
-            cy={size / 2 - orbR * 0.12}
-            r={orbR * 0.08}
-            fill={PIP_COLORS.pupil}
-          />
-          <Circle
-            cx={size / 2 + orbR * 0.38}
-            cy={size / 2 - orbR * 0.12}
-            r={orbR * 0.08}
-            fill={PIP_COLORS.pupil}
-          />
-        </AnimatedG>
-
-        {/* Mouth removed — eyes alone are stronger and more iconic (creative review) */}
-
-        {/* Tail */}
-        <AnimatedPath
-          d={`
-            M ${size / 2 - orbR * 0.35} ${size / 2 + orbR * 0.65}
-            Q ${size / 2} ${size / 2 + orbR * 0.7 + orbR * 1.3} ${size / 2 + orbR * 0.4} ${size / 2 + orbR * 0.7 + orbR * 0.5}
-            Q ${size / 2 + orbR * 0.1} ${size / 2 + orbR * 0.7 + orbR * 0.15} ${size / 2} ${size / 2 + orbR * 0.65}
-            Q ${size / 2 - orbR * 0.1} ${size / 2 + orbR * 0.7 + orbR * 0.15} ${size / 2 - orbR * 0.4} ${size / 2 + orbR * 0.7 + orbR * 0.5}
-            Q ${size / 2} ${size / 2 + orbR * 0.7 + orbR * 1.3} ${size / 2 + orbR * 0.35} ${size / 2 + orbR * 0.65}
-            Z
-          `}
-          fill={PIP_COLORS.primaryGlow}
-          animatedProps={useAnimatedProps(() => ({
-            opacity: v.tailOpacity.value * 0.45,
-          }))}
-        />
-
-        {/* Particles */}
+      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={StyleSheet.absoluteFill}>
+        {/* Particles — orbit AROUND the composited character */}
         <AnimatedG
           animatedProps={useAnimatedProps(() => ({
             opacity: v.particleOpacity.value,
@@ -543,6 +473,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  // The composited canonical character — fills the container, centered.
+  pipCharacter: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+  },
   captionContainer: {
     position: "absolute",
     bottom: -20,
@@ -553,7 +489,7 @@ const styles = StyleSheet.create({
   caption: {
     fontSize: 14,
     fontFamily: "Inter",
-    color: "#64748B",
+    color: "#5B6B72",
     textAlign: "center",
   },
 });
