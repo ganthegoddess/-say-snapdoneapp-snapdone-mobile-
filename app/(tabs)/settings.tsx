@@ -39,12 +39,13 @@ export default function SettingsScreen() {
   const usageCount = actions?.length ?? 0;
 
   const handleSignOut = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert("Sign out", "I've kept everything safe. Sign out here and I'll be right here when you come back.", [
+      { text: "Stay", style: "cancel" },
       {
-        text: "Sign Out",
+        text: "Sign out",
         style: "destructive",
         onPress: async () => {
+          // Clear token + user (SecureStore) and return to the sign-in screen.
           await signOut();
           router.replace("/(auth)/sign-in");
         },

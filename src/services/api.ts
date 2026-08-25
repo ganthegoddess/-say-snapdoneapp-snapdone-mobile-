@@ -1,5 +1,6 @@
 import { FULL_API_URL } from "../constants/api";
 import { useAuthStore } from "../stores/authStore";
+import { handleAuthExpired } from "../lib/authExpiry";
 
 /** Generic API error */
 export class ApiError extends Error {
@@ -118,9 +119,13 @@ async function request<T>(
   if (response.status === 401 && !noAuth) {
     const authStore = useAuthStore.getState();
     if (authStore.token) {
+      let refreshed = false;
       try {
-        const refreshed = await refreshToken();
-        if (refreshed) {
+        refreshed = await refreshToken();
+      } catch {
+        refreshed = false;
+      }
+      if (refreshed) {
           // Retry the original request with new token (no further retry loop)
           headers["Authorization"] = `Bearer ${useAuthStore.getState().token}`;
           const retryResponse = await fetchWithTimeout(
@@ -136,11 +141,11 @@ async function request<T>(
             }
             return retryResponse.json();
           }
-        }
-      } catch {
-        // Refresh failed — sign out
-        await authStore.signOut();
-        throw new ApiError(401, "token_expired", "Session expired. Please sign in again.");
+      } else {
+        // Refresh failed (e.g. a stale pre-rotation token) — clear the dead
+        // session and surface a clear, warm re-login path. Never silently swallow.
+        await handleAuthExpired();
+        throw new ApiError(401, "token_expired", "Your session ended. Please sign back in to continue.")
       }
     }
   }
@@ -234,44 +239,58 @@ export async function uploadFile<T>(
   onProgress?: (progress: number) => void,
   timeoutMs: number = UPLOAD_TIMEOUT_MS
 ): Promise<T> {
-  const token = useAuthStore.getState().token;
-  const headers: Record<string, string> = {};
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
   const url = endpoint.startsWith("http") ? endpoint : `${FULL_API_URL}${endpoint}`;
-
-  return new Promise<T>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    // Hard timeout so an upload can never hang the screen forever.
-    xhr.timeout = timeoutMs;
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress(event.loaded / event.total);
-      }
-    };
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(JSON.parse(xhr.responseText));
-      } else {
-        try {
-          const error = JSON.parse(xhr.responseText);
-          reject(new ApiError(xhr.status, error.error || "upload_failed", error.message || "Upload failed"));
-        } catch {
-          reject(new ApiError(xhr.status, "upload_failed", "Upload failed"));
+  // Send the multipart body with a given auth token. Rejects on network/timeout.
+  const doSend = (authToken: string | null): Promise<{ status: number; text: string }> =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      // Hard timeout so an upload can never hang the screen forever.
+      xhr.timeout = timeoutMs;
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) {
+          onProgress(event.loaded / event.total);
         }
-      }
-    };
+      };
+      xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
+      xhr.onerror = () => reject(new ApiError(0, "network_error", "No internet connection. Please try again."));
+      xhr.ontimeout = () => reject(new ApiError(0, "timeout", "The upload timed out. Please try again."));
+      xhr.open("POST", url);
+      if (authToken) xhr.setRequestHeader("Authorization", `Bearer ${authToken}`);
+      xhr.send(formData);
+    });
 
-    xhr.onerror = () => reject(new ApiError(0, "network_error", "No internet connection. Please try again."));
-    xhr.ontimeout = () => reject(new ApiError(0, "timeout", "The upload timed out. Please try again."));
-
-    xhr.open("POST", url);
-    Object.entries(headers).forEach(([key, value]) => xhr.setRequestHeader(key, value));
-    xhr.send(formData);
-  });
+  // First attempt with the current token.
+  let res = await doSend(useAuthStore.getState().token);
+  // On 401 (expired/invalid token, e.g. after a JWT_SECRET rotation) try a
+  // refresh once and retry with the new token.
+  if (res.status === 401 && useAuthStore.getState().token) {
+    let refreshed = false;
+    try {
+      refreshed = await refreshToken();
+    } catch {
+      refreshed = false;
+    }
+    if (refreshed) {
+      res = await doSend(useAuthStore.getState().token);
+    } else {
+      // Refresh failed — clear the dead session + surface a warm re-login
+      // path. Never silently swallow a 401 on photo/voice uploads.
+      await handleAuthExpired();
+      throw new ApiError(401, "token_expired", "Your session ended. Please sign back in to continue.");
+    }
+  }
+  if (res.status >= 200 && res.status < 300) {
+    return JSON.parse(res.text) as T;
+  }
+  let errorBody: ApiErrorBody | null = null;
+  try {
+    errorBody = JSON.parse(res.text) as ApiErrorBody | null;
+  } catch {
+    errorBody = null;
+  }
+  throw new ApiError(
+    res.status,
+    errorBody?.error || "upload_failed",
+    errorBody?.message || "Upload failed"
+  );
 }
