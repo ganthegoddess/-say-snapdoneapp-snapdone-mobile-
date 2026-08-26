@@ -52,22 +52,31 @@ export function useNotifications() {
     return true;
   }, []);
 
-  /** Schedule a local notification for a reminder */
+  /** Schedule a local notification for a reminder. Resolves true when scheduled,
+   *  false when it couldn't be (past-date, permission, or platform error) — the
+   *  caller surfaces a warm message instead of a red throw. Never throws. */
   const scheduleReminder = useCallback(
-    async ({ title, body, date, actionId }: ScheduleReminderParams) => {
-      const id = await Notifications.scheduleNotificationAsync({
-        content: {
-          title,
-          body: body || "Tap to view details",
-          data: { actionId, type: "reminder" },
-          sound: true,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date,
-        },
-      });
-      return id;
+    async ({ title, body, date, actionId }: ScheduleReminderParams): Promise<boolean> => {
+      // A reminder scheduled in the past throws ERR_NOTIFICATIONS_FAILED_TO_SCHEDULE.
+      if (!date || date.getTime() <= Date.now()) return false;
+      try {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title,
+            body: body || "Tap to view details",
+            data: { actionId, type: "reminder" },
+            sound: true,
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date,
+          },
+        });
+        return true;
+      } catch (err) {
+        console.warn("scheduleReminder failed:", err);
+        return false;
+      }
     },
     []
   );

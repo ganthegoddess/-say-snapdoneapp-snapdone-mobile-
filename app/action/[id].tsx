@@ -128,12 +128,15 @@ export default function ActionDetailScreen() {
       if (action?.due_date) {
         const hasNotifPermission = await requestNotifPermissions();
         if (hasNotifPermission) {
-          await scheduleReminder({
+          const reminderScheduled = await scheduleReminder({
             title: `Reminder: ${action.title}`,
             body: action.description || "",
             date: new Date(new Date(action.due_date).getTime() - 15 * 60 * 1000), // 15 min before
             actionId: id,
           });
+          if (!reminderScheduled) {
+            Alert.alert("Reminder", "PIP couldn't set the reminder — try again.");
+          }
         }
       }
 

@@ -16,7 +16,7 @@ interface PipBadgeProps {
 export function PipBadge({ size = 96 }: PipBadgeProps) {
   return (
     <View style={[styles.wrap, { width: size + 24, height: size + 24, borderRadius: (size + 24) / 2 }]}>
-      <PipWisp state="idle" position="center-screen" size={size} background="light" />
+      <PipWisp state="idle" position="center-screen" size={size} background="light" inline />
     </View>
   );
 }

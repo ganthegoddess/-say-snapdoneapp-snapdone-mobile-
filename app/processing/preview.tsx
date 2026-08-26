@@ -56,7 +56,7 @@ export default function PhotoPreviewScreen() {
   const photoUri = uri ? decodeURIComponent(uri) : "";
 
   const setDraft = useCaptureStore((state) => state.setDraft);
-  const { uploadPhoto, upgradeRequired } = useCapture();
+  const { uploadPhoto, upgradeRequired, error, isUploading } = useCapture();
 
   const [phase, setPhase] = useState<PreviewPhase>("preview");
   const [voiceUri, setVoiceUri] = useState<string | null>(null);
@@ -308,8 +308,16 @@ export default function PhotoPreviewScreen() {
 
         {/* Confirm button */}
         <View style={styles.bottomActions}>
-          <TouchableOpacity style={styles.saveBtn} onPress={handleSaveMemory}>
-            <Text style={styles.saveBtnText}>✓ Use Photo</Text>
+          {error ? (
+            <View style={styles.uploadError}>
+              <Text style={styles.uploadErrorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={handleSaveMemory} disabled={isUploading}>
+                <Text style={styles.retryBtnText}>{isUploading ? "Uploading…" : "Try Again"}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+          <TouchableOpacity style={[styles.saveBtn, isUploading && styles.saveBtnDisabled]} onPress={handleSaveMemory} disabled={isUploading}>
+            <Text style={styles.saveBtnText}>{isUploading ? "Uploading…" : "✓ Use Photo"}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleDiscardAll} style={styles.discardBtn}>
             <Text style={styles.discardBtnText}>Discard</Text>
@@ -529,6 +537,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveBtnText: { color: "#FFF", fontSize: 17, fontWeight: "700" },
+  saveBtnDisabled: { opacity: 0.6 },
+  uploadError: { width: "100%", backgroundColor: colors.warm.pipGlow, borderColor: colors.warm.soft, borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, marginBottom: 12, alignItems: "center" },
+  uploadErrorText: { color: colors.text.muted, fontSize: 13, textAlign: "center", lineHeight: 18, marginBottom: 8 },
+  retryBtn: { backgroundColor: colors.error, paddingVertical: 9, paddingHorizontal: 22, borderRadius: 999 },
+  retryBtnText: { color: colors.white, fontSize: 14, fontWeight: "700" },
   discardBtn: { alignItems: "center", paddingVertical: 6 },
   discardBtnText: { color: colors.text.muted, fontSize: 14 },
 

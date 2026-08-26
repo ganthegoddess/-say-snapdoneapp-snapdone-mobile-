@@ -16,6 +16,31 @@ export function isUpgradeRequired(err: unknown): boolean {
   return false;
 }
 
+/**
+ * Map a capture/upload failure to a clear, PIP-toned, actionable message so the
+ * user is never left with a silent or raw-server "Upload failed". Keeps the
+ * recovery obvious (retry / check connection) rather than a dead red error.
+ */
+export function friendlyCaptureError(err: unknown): string {
+  if (err instanceof ApiError) {
+    // 402 upgrade_required is handled separately (LimitReachedScreen).
+    if (err.status === 422) {
+      return "That photo didn't come through. Please take it again and retry.";
+    }
+    if (err.code === "network_error" || err.status === 0) {
+      return "No internet connection. Check your signal and try again.";
+    }
+    if (err.code === "timeout") {
+      return "The photo took too long to upload. Please try again.";
+    }
+    if (err.status >= 500) {
+      return "SnapDone couldn't save that right now. Please try again in a moment.";
+    }
+    return err.message && err.message.trim() ? err.message : "That photo couldn't upload. Please try again.";
+  }
+  return "That photo couldn't upload. Please try again.";
+}
+
 export function useCapture() {
   const draft = useCaptureStore((state) => state.draft);
   const setDraft = useCaptureStore((state) => state.setDraft);
@@ -85,7 +110,7 @@ export function useCapture() {
         setUpgradeRequired(true);
         trackEvent("limit_reached_shown", { capture_type: inputType });
       } else {
-        setError(err.message || "Upload failed");
+        setError(friendlyCaptureError(err));
       }
       setIsUploading(false);
       setDraft({ status: "failed" });
