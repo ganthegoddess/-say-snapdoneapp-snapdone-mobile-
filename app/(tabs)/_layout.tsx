@@ -84,7 +84,10 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="⚙️" />,
         }}
       />
-      {/* Removed as tabs (underlying routes remain for deep links): calendar, lists */}
+      {/* Legacy routes kept on disk for deep-link/history compat but HIDDEN from
+          the tab bar (owner 4-tab IA: Home / Memory Vault / Household / Settings). */}
+      <Tabs.Screen name="calendar" options={{ href: null }} />
+      <Tabs.Screen name="lists" options={{ href: null }} />
     </Tabs>
   );
 }
