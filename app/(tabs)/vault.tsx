@@ -25,7 +25,7 @@ const STATUS_MAP: Record<string, "pending" | "confirmed" | "dismissed"> = {
   completed: "confirmed",
   dismissed: "dismissed",
 };
-export default function ActionsScreen() {
+export default function VaultScreen() {
   const { data: actions, isLoading, error, refetch } = useActions();
   const filtered = actions || [];
   const grouped = filtered.reduce((acc: Record<string, ActionItem[]>, a: ActionItem) => {
