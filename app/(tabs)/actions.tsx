@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { colors, spacing, typography, borderRadius, shadow } from "../../src/constants/colors";
@@ -10,13 +9,8 @@ import { Icon } from "../../src/components/ui/icons";
 import { PipBadge } from "../../src/components/ui/PipBadge";
 import { pip } from "../../src/constants/pipCopy";
 import type { ActionItem } from "../../src/services/actions";
-type FilterType = "all" | "pending" | "done" | "lists";
-const FILTERS: { key: FilterType; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "pending", label: "To do" },
-  { key: "done", label: "Done" },
-  { key: "lists", label: "Lists" },
-];
+// Memory Vault is a pure memory list — no segment/filter controls, no legacy
+// "Lists" IA (owner: "the user never files/organizes"). DESIGN-SYSTEM §3.
 const TYPE_MAP: Record<string, any> = {
   reminder: "reminder",
   event: "event",
@@ -32,15 +26,8 @@ const STATUS_MAP: Record<string, "pending" | "confirmed" | "dismissed"> = {
   dismissed: "dismissed",
 };
 export default function ActionsScreen() {
-  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const { data: actions, isLoading, error, refetch } = useActions();
-  const filtered = (actions || []).filter((a: ActionItem) => {
-    if (activeFilter === "all") return true;
-    if (activeFilter === "pending") return a.status === "pending_confirmation" || a.status === "active";
-    if (activeFilter === "done") return a.status === "completed";
-    if (activeFilter === "lists") return a.action_type === "task" || a.action_type === "grocery_list";
-    return true;
-  });
+  const filtered = actions || [];
   const grouped = filtered.reduce((acc: Record<string, ActionItem[]>, a: ActionItem) => {
     const key = a.due_date ? new Date(a.due_date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "Other";
     if (!acc[key]) acc[key] = [];
@@ -59,28 +46,6 @@ export default function ActionsScreen() {
           Keep the affordance dormant rather than surfacing a broken action.
         */}
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipRow}
-        contentContainerStyle={styles.chipRowContent}
-      >
-        {FILTERS.map((f) => {
-          const active = activeFilter === f.key;
-          return (
-            <TouchableOpacity
-              key={f.key}
-              style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}
-              onPress={() => setActiveFilter(f.key)}
-            >
-              {active && <BrandGradient style={styles.chipFill} rounded={borderRadius.full} colors={colors.gradient.colors} />}
-              <Text style={[styles.chipText, active ? styles.chipTextActive : styles.chipTextInactive]}>
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
       <ScrollView style={styles.list}>
         {isLoading ? (
           <><Skeleton lines={3} /><Skeleton lines={2} /><Skeleton lines={3} /></>
@@ -135,15 +100,6 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: 12 },
   title: { fontSize: typography.sizes.h1, fontWeight: "800", color: colors.deep },
   subtitle: { fontSize: typography.sizes.bodySmall, color: colors.text.muted, marginTop: 2 },
-  chipRow: { flexGrow: 0, marginBottom: spacing.md },
-  chipRowContent: { paddingHorizontal: spacing.lg, gap: spacing.sm },
-  chip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: borderRadius.full, minHeight: 36, justifyContent: "center", overflow: "hidden" },
-  chipActive: { backgroundColor: "transparent" },
-  chipInactive: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border },
-  chipFill: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: borderRadius.full },
-  chipText: { fontSize: typography.sizes.caption, fontWeight: "700" },
-  chipTextActive: { color: "#FFFFFF" },
-  chipTextInactive: { color: colors.text.primary },
   list: { flex: 1, paddingHorizontal: spacing.lg },
   groupTitle: { fontSize: 15, fontWeight: "700", color: colors.deep, marginBottom: 8, marginTop: 12 },
   empty: { alignItems: "center", paddingTop: 64, paddingHorizontal: spacing.lg },
