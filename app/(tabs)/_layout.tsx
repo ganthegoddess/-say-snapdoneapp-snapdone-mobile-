@@ -57,7 +57,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="vault"
+        name="actions"
         options={{
           title: "Memory Vault",
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="📁" />,

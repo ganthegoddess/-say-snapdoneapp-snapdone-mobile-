@@ -8,16 +8,13 @@ import { Icon } from "../src/components/ui/icons";
 import { useAuthStore } from "../src/stores/authStore";
 import { pip, fill, HOME_CAPTURE_ACTIONS } from "../src/constants/pipCopy";
 
-/** v6 premium capture-pill fill (matches Home + mockup_kit.tinted_pill). */
+/** FILLED premium capture-pill fill (owner B direction): full-opacity brand tint gradient. */
 function tintFill(base: string): [string, string] {
   const r = parseInt(base.slice(1, 3), 16);
   const g = parseInt(base.slice(3, 5), 16);
   const b = parseInt(base.slice(5, 7), 16);
-  const lift = (c: number) => Math.round(c + (255 - c) * 0.34);
-  return [
-    `rgba(${lift(r)},${lift(g)},${lift(b)},0.40)`,
-    `rgba(${r},${g},${b},0.50)`,
-  ];
+  const deep = (c: number) => Math.round(c * 0.82);
+  return [base, `rgb(${deep(r)},${deep(g)},${deep(b)})`];
 }
 
 
@@ -62,7 +59,7 @@ export default function OnboardingScreen() {
               end={{ x: 0, y: 1 }}
               style={styles.capturePill}
             >
-              <Icon name={a.icon} size={30} color={a.tint} />
+              <Icon name={a.icon} size={30} color="#FFFFFF" />
               <View style={styles.captureText}>
                 <Text style={styles.captureLabel}>{a.label}</Text>
                 <Text style={styles.captureHint}>{a.hint}</Text>
@@ -110,8 +107,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   captureText: { flex: 1 },
-  captureLabel: { fontSize: 17, fontWeight: "800", color: colors.ink },
-  captureHint: { fontSize: 13, color: colors.text.muted, marginTop: 2 },
+  captureLabel: { fontSize: 17, fontWeight: "800", color: "#FFFFFF" },
+  captureHint: { fontSize: 13, color: "rgba(255,255,255,0.85)", marginTop: 2 },
   doneWrap: { width: "100%", marginTop: 36 },
   done: { height: 56, alignItems: "center", justifyContent: "center" },
   doneText: { color: "#FFFFFF", fontSize: 18, fontWeight: "700" },

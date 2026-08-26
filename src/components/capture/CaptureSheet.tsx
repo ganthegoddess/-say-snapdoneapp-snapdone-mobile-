@@ -14,16 +14,13 @@ import { trackEvent } from "../../lib/posthog";
 import { isUpgradeRequired } from "../../hooks/useCapture";
 import { Icon } from "../ui/icons";
 
-/** v6 premium capture-pill fill (matches Home/onboarding + mockup_kit.tinted_pill). */
+/** FILLED premium capture-pill fill (owner B direction): full-opacity brand tint gradient. */
 function tintFill(base: string): [string, string] {
   const r = parseInt(base.slice(1, 3), 16);
   const g = parseInt(base.slice(3, 5), 16);
   const b = parseInt(base.slice(5, 7), 16);
-  const lift = (c: number) => Math.round(c + (255 - c) * 0.34);
-  return [
-    `rgba(${lift(r)},${lift(g)},${lift(b)},0.40)`,
-    `rgba(${r},${g},${b},0.50)`,
-  ];
+  const deep = (c: number) => Math.round(c * 0.82);
+  return [base, `rgb(${deep(r)},${deep(g)},${deep(b)})`];
 }
 
 const MAX_RECORDING_SECONDS = 120; // matches backend MAX_VOICE_DURATION_MS
@@ -305,7 +302,7 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
                     end={{ x: 0, y: 1 }}
                     style={styles.sheetOptionPill}
                   >
-                    <Icon name={m.icon} size={30} color={m.tint} />
+                    <Icon name={m.icon} size={30} color="#FFFFFF" />
                     <Text style={styles.sheetText}>{m.title}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -345,8 +342,8 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 16,
   },
-  sheetText: { fontSize: 19, color: colors.ink, fontWeight: "800" },
-  sheetCancel: { marginTop: 16, paddingVertical: 14, alignItems: "center", backgroundColor: colors.surface, borderRadius: 12 },
+  sheetText: { fontSize: 19, color: "#FFFFFF", fontWeight: "800" },
+  sheetCancel: { marginTop: 16, paddingVertical: 14, alignItems: "center" },
   sheetCancelText: { fontSize: 16, color: colors.text.muted, fontWeight: "600" },
   // Voice
   voiceBox: { alignItems: "center", paddingVertical: 16 },

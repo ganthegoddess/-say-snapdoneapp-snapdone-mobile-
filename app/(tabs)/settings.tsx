@@ -162,8 +162,10 @@ export default function SettingsScreen() {
 
       {/* Sign out */}
       <View style={styles.section}>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
+        <TouchableOpacity style={styles.signOutWrap} onPress={handleSignOut}>
+          <BrandGradient style={styles.signOutButton} rounded={12} colors={["#F87171", "#DC2626"]}>
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </BrandGradient>
         </TouchableOpacity>
       </View>
       <View style={{ height: 40 }} />
@@ -210,13 +212,11 @@ const styles = StyleSheet.create({
   upgradeText: { fontSize: 13, color: "rgba(255,255,255,0.92)", marginTop: 2 },
   usageText: { fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 4 },
   // Sign out
+  signOutWrap: { borderRadius: 12, shadowColor: "#DC2626", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
   signOutButton: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
     padding: 16,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#FECACA",
+    justifyContent: "center",
   },
-  signOutText: { fontSize: 16, fontWeight: "700", color: colors.error },
+  signOutText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
 });

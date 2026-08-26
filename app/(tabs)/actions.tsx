@@ -25,7 +25,7 @@ const STATUS_MAP: Record<string, "pending" | "confirmed" | "dismissed"> = {
   completed: "confirmed",
   dismissed: "dismissed",
 };
-export default function VaultScreen() {
+export default function ActionsScreen() {
   const { data: actions, isLoading, error, refetch } = useActions();
   const filtered = actions || [];
   const grouped = filtered.reduce((acc: Record<string, ActionItem[]>, a: ActionItem) => {
@@ -37,7 +37,7 @@ export default function VaultScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerInner}>
           <Text style={styles.title}>Memory Vault</Text>
           <Text style={styles.subtitle}>I've got everything you've trusted me with.</Text>
         </View>
@@ -54,8 +54,10 @@ export default function VaultScreen() {
             <View style={styles.emptyIconWrap}><Icon name="warning" size={34} color={colors.warm.amber} /></View>
             <Text style={styles.emptyTitle}>Couldn't reach SnapDone</Text>
             <Text style={styles.emptyText}>Your memories are safe — I just couldn't load them. Check your connection and try again.</Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
-              <Text style={styles.retryText}>Try again</Text>
+            <TouchableOpacity style={styles.retryWrap} onPress={() => refetch()}>
+              <BrandGradient style={styles.retryBtn} rounded={borderRadius.full}>
+                <Text style={styles.retryText}>Try again</Text>
+              </BrandGradient>
             </TouchableOpacity>
           </View>
         ) : Object.keys(grouped).length === 0 ? (
@@ -97,16 +99,18 @@ export default function VaultScreen() {
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
-  header: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: 12 },
-  title: { fontSize: typography.sizes.h1, fontWeight: "800", color: colors.deep },
-  subtitle: { fontSize: typography.sizes.bodySmall, color: colors.text.muted, marginTop: 2 },
+  header: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: 12, alignItems: "center" },
+  headerInner: { alignItems: "center" },
+  title: { fontSize: typography.sizes.h1, fontWeight: "800", color: colors.deep, textAlign: "center" },
+  subtitle: { fontSize: typography.sizes.bodySmall, color: colors.text.muted, marginTop: 2, textAlign: "center" },
   list: { flex: 1, paddingHorizontal: spacing.lg },
   groupTitle: { fontSize: 15, fontWeight: "700", color: colors.deep, marginBottom: 8, marginTop: 12 },
   empty: { alignItems: "center", paddingTop: 64, paddingHorizontal: spacing.lg },
   emptyIconWrap: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.warm.pipGlow, alignItems: "center", justifyContent: "center", marginBottom: spacing.md, borderWidth: 1, borderColor: colors.warm.soft },
   emptyTitle: { fontSize: typography.sizes.h3, fontWeight: "700", color: colors.deep, marginBottom: 8, textAlign: "center" },
   emptyText: { fontSize: typography.sizes.bodySmall, color: colors.text.muted, textAlign: "center", lineHeight: 21 },
-  retryBtn: { marginTop: spacing.lg, backgroundColor: colors.gradient.to, borderRadius: borderRadius.full, paddingVertical: 12, paddingHorizontal: 28 },
+  retryWrap: { marginTop: spacing.lg },
+  retryBtn: { paddingVertical: 12, paddingHorizontal: 28, alignItems: "center" },
   retryText: { color: colors.white, fontSize: 15, fontWeight: "700" },
   emptyCta: { marginTop: spacing.lg, flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 28, backgroundColor: "transparent" },
   emptyCtaText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
