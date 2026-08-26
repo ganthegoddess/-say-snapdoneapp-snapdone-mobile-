@@ -26,20 +26,17 @@ import { CaptureSheet } from "../../src/components/capture/CaptureSheet";
 const LOCATION_COOLDOWN = 30 * 60 * 1000; // 30 minutes
 
 /**
- * v6 premium capture-pill fill: soft vertical gradient from a LIGHTER tint (top) to
- * the DEEPER brand tint (bottom) — mirrors mockup_kit.tinted_pill (top = tint lifted
- * toward white by 0.34). Translucent alpha keeps it a light/faded brand tint per §6.3
- * (→ dark INK label), staying premium/refined, not a heavy solid block.
+ * FILLED premium capture-pill fill (owner B direction, Aug 26): full-opacity
+ * brand tint gradient — base tint (top) deepening to a richer shade (bottom).
+ * White label + white icon on the filled pill (ONE uniform button treatment,
+ * same text colour everywhere — no faded/outlined pills).
  */
 function tintFill(base: string): [string, string] {
   const r = parseInt(base.slice(1, 3), 16);
   const g = parseInt(base.slice(3, 5), 16);
   const b = parseInt(base.slice(5, 7), 16);
-  const lift = (c: number) => Math.round(c + (255 - c) * 0.34);
-  return [
-    `rgba(${lift(r)},${lift(g)},${lift(b)},0.40)`,
-    `rgba(${r},${g},${b},0.50)`,
-  ];
+  const deep = (c: number) => Math.round(c * 0.82);
+  return [base, `rgb(${deep(r)},${deep(g)},${deep(b)})`];
 }
 
 const TYPE_MAP: Record<string, string> = {
@@ -280,7 +277,7 @@ export default function HomeScreen() {
                 end={{ x: 0, y: 1 }}
                 style={styles.capturePill}
               >
-                <Icon name={a.icon} size={34} color={a.tint} />
+                <Icon name={a.icon} size={34} color="#FFFFFF" />
                 <Text style={styles.captureActionLabel}>{a.label}</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -438,7 +435,7 @@ const styles = StyleSheet.create({
     paddingVertical: 22,
     paddingHorizontal: 20,
   },
-  captureActionLabel: { fontSize: 20, fontWeight: "800", color: colors.ink, letterSpacing: 0.2 },
+  captureActionLabel: { fontSize: 20, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.2 },
   // PIP loading
   pipLoading: { alignItems: "center", paddingVertical: 80, paddingHorizontal: 24 },
   pipLoadingText: { fontSize: 15, color: colors.text.muted, marginTop: 4 },
