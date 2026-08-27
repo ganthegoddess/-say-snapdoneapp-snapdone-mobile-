@@ -1,6 +1,8 @@
 import { useState, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, router, Link } from "expo-router";
+import { PipWisp } from "../../src/components/PipWisp";
 import { colors } from "../../src/constants/colors";
 import { Button } from "../../src/components/ui/Button";
 import { useAction, useUpdateAction } from "../../src/hooks/useActions";
@@ -34,8 +36,9 @@ const PRIORITIES = [
 
 export default function ActionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: action, isLoading } = useAction(id || "");
+  const { data: action, isLoading, error: actionError, refetch: refetchAction } = useAction(id || "");
   const updateAction = useUpdateAction();
+  const queryClient = useQueryClient();
   const { scheduleReminder, requestPermissions: requestNotifPermissions } = useNotifications();
   const { createEvent, requestPermissions: requestCalendarPermissions } = useCalendar();
   const captureDraftAssigneeId = useCaptureStore((s) => s.draft.assigneeId);
@@ -50,7 +53,13 @@ export default function ActionDetailScreen() {
     activeHouseholdId || ""
   );
 
-  const [confirmed, setConfirmed] = useState(false);
+  const [saveReceipt, setSaveReceipt] = useState<{
+    title: string;
+    date: string | null;
+    calendarCreated: boolean | null;
+    reminderScheduled: boolean | null;
+  } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [category, setCategory] = useState(action?.action_type || "event");
   const [priority, setPriority] = useState(action?.priority || "medium");
   const [addToCalendar, setAddToCalendar] = useState(true);
@@ -87,79 +96,102 @@ export default function ActionDetailScreen() {
   );
 
   const handleConfirm = useCallback(async () => {
-    try {
-      // Update on backend
-      if (id && id !== "demo") {
-        const patchData: Record<string, unknown> = { status: "active", priority };
-        if (clientAssigneeId) {
-          patchData.assignee_id = clientAssigneeId;
-        }
-        await updateAction.mutateAsync({ id, data: patchData as any });
-      }
+    if (!id || id === "demo" || !action) return;
 
-      // Handle sharing — send selected members to backend
-      if (shareWithHousehold && selectedMemberIds.length > 0 && id && id !== "demo") {
+    setIsSaving(true);
+    try {
+      // This PATCH is the source of truth: only show PIP's remembered-it receipt
+      // after the backend has confirmed the memory is saved.
+      const patchData: Record<string, unknown> = { status: "active", priority };
+      if (clientAssigneeId) patchData.assignee_id = clientAssigneeId;
+      await updateAction.mutateAsync({ id, data: patchData as any });
+
+      // Keep both the detail and Memory Vault caches coherent before the user can
+      // leave this screen. The vault still refetches from the API; this prevents a
+      // stale cached row from briefly contradicting the saved confirmation.
+      queryClient.setQueryData(["action", id], (current: typeof action | undefined) =>
+        current ? { ...current, status: "active", priority, assignee_id: clientAssigneeId || undefined } : current
+      );
+      await queryClient.invalidateQueries({ queryKey: ["actions"] });
+
+      // Household sharing is intentionally non-blocking. A successfully saved
+      // personal memory must never be represented as unsaved because sharing failed.
+      if (shareWithHousehold && selectedMemberIds.length > 0) {
         setIsSharing(true);
         try {
-          // If already shared and list changed, unshare then reshare
-          if (isAlreadyShared) {
-            await unshareAction(id);
-          }
+          if (isAlreadyShared) await unshareAction(id);
           await shareAction(id, selectedMemberIds);
-        } catch (shareErr: any) {
-          // Sharing is non-blocking — log but don't block confirmation
-          console.warn("Sharing failed:", shareErr.message);
+        } catch (shareErr: unknown) {
+          console.warn("Sharing failed:", shareErr);
         } finally {
           setIsSharing(false);
         }
-      } else if (isAlreadyShared && !shareWithHousehold && id && id !== "demo") {
-        // User toggled sharing off on a previously shared action
+      } else if (isAlreadyShared && !shareWithHousehold) {
         setIsSharing(true);
         try {
           await unshareAction(id);
-        } catch (shareErr: any) {
-          console.warn("Unshare failed:", shareErr.message);
+        } catch (shareErr: unknown) {
+          console.warn("Unshare failed:", shareErr);
         } finally {
           setIsSharing(false);
         }
       }
 
-      // Schedule notification reminder
-      if (action?.due_date) {
-        const hasNotifPermission = await requestNotifPermissions();
-        if (hasNotifPermission) {
-          const reminderScheduled = await scheduleReminder({
-            title: `Reminder: ${action.title}`,
-            body: action.description || "",
-            date: new Date(new Date(action.due_date).getTime() - 15 * 60 * 1000), // 15 min before
-            actionId: id,
-          });
-          if (!reminderScheduled) {
-            Alert.alert("Reminder", "PIP couldn't set the reminder — try again.");
+      // These are useful integrations, but they are not the memory save itself.
+      // Record their real outcomes in the receipt instead of blocking or lying.
+      let reminderScheduled: boolean | null = null;
+      let calendarCreated: boolean | null = null;
+      if (action.due_date) {
+        try {
+          const permitted = await requestNotifPermissions();
+          reminderScheduled = permitted
+            ? await scheduleReminder({
+                title: `Reminder: ${action.title}`,
+                body: action.description || "",
+                date: new Date(new Date(action.due_date).getTime() - 15 * 60 * 1000),
+                actionId: id,
+              })
+            : false;
+        } catch (reminderError: unknown) {
+          console.warn("Reminder scheduling failed:", reminderError);
+          reminderScheduled = false;
+        }
+
+        if (addToCalendar) {
+          try {
+            const permitted = await requestCalendarPermissions();
+            if (permitted) {
+              await createEvent({
+                title: action.title,
+                notes: action.description,
+                startDate: new Date(action.due_date),
+                location: action.location || undefined,
+                alarms: [{ relativeOffset: -15 }],
+              });
+              calendarCreated = true;
+            } else {
+              calendarCreated = false;
+            }
+          } catch (calendarError: unknown) {
+            console.warn("Calendar event creation failed:", calendarError);
+            calendarCreated = false;
           }
         }
       }
 
-      // Add to calendar if toggled on
-      if (addToCalendar) {
-        const hasCalPermission = await requestCalendarPermissions();
-        if (hasCalPermission && action?.due_date) {
-          await createEvent({
-            title: action.title,
-            notes: action.description,
-            startDate: new Date(action.due_date),
-            location: action.location || undefined,
-            alarms: [{ relativeOffset: -15 }],
-          });
-        }
-      }
-
-      setConfirmed(true);
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to save action");
+      setSaveReceipt({
+        title: action.title,
+        date: action.due_date || null,
+        calendarCreated,
+        reminderScheduled,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "PIP couldn't save that just yet. Please try again.";
+      Alert.alert("Couldn't save memory", message);
+    } finally {
+      setIsSaving(false);
     }
-  }, [action, id, priority, addToCalendar, shareWithHousehold, selectedMemberIds, isAlreadyShared, clientAssigneeId, updateAction, scheduleReminder, requestNotifPermissions, createEvent, requestCalendarPermissions]);
-
+  }, [action, id, priority, addToCalendar, shareWithHousehold, selectedMemberIds, isAlreadyShared, clientAssigneeId, updateAction, queryClient, scheduleReminder, requestNotifPermissions, createEvent, requestCalendarPermissions]);
   const dismissAssignee = useCallback(() => {
     setClientAssigneeId(null);
     setClientAssigneeName(null);
@@ -174,25 +206,61 @@ export default function ActionDetailScreen() {
     );
   }
 
-  const actionTitle = action?.title || "Dentist Appointment";
-  const actionDetail = action?.description || "123 Main St, Suite 200 · Dr. Smith";
-  const actionDate = action?.due_date ? new Date(action.due_date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "April 12, 2026";
-  const actionTime = action?.due_date ? new Date(action.due_date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "3:00 PM";
+  // Never replace a real failed retrieval with a demo appointment. A made-up
+  // memory after a user entrusted us with one would violate the Memory Covenant.
+  if (actionError || !action) {
+    return (
+      <View style={styles.unavailableContainer}>
+        <PipWisp state="thinking" position="center-screen" size={88} background="light" />
+        <Text style={styles.unavailableTitle}>I couldn't open that memory.</Text>
+        <Text style={styles.unavailableText}>Your memory is safe. Please try loading it again.</Text>
+        <View style={styles.unavailableActions}>
+          <Button title="Try again" onPress={() => refetchAction()} variant="primary" size="md" />
+          <Button title="Back to Memory Vault" onPress={() => router.replace("/(tabs)/actions")} variant="secondary" size="md" />
+        </View>
+      </View>
+    );
+  }
 
-  if (confirmed) {
+  const actionTitle = action.title;
+  const actionDetail = action.description || "No additional details";
+  const actionDate = action.due_date ? new Date(action.due_date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "No date attached";
+  const actionTime = action.due_date ? new Date(action.due_date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "No time attached";
+
+  if (saveReceipt) {
+    const receiptDate = saveReceipt.date
+      ? new Date(saveReceipt.date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })
+      : "No date attached";
     return (
       <View style={styles.confirmedContainer}>
-        <Text style={styles.confirmedIcon}>✅</Text>
-        <Text style={styles.confirmedTitle}>I've got it.</Text>
-        <Text style={styles.confirmedText}>
-          {addToCalendar ? "It's on your calendar. " : ""}
-          I'll remind you when the time comes.
-        </Text>
-        <Link href="/(tabs)" asChild>
-          <TouchableOpacity style={styles.backHomeBtn}>
-            <Text style={styles.backHomeText}>Back to Home</Text>
-          </TouchableOpacity>
-        </Link>
+        <PipWisp state="success" position="center-screen" size={104} background="light" />
+        <Text style={styles.confirmedTitle}>PIP remembered it!</Text>
+        <View style={styles.receiptCard}>
+          <Text style={styles.receiptTitle}>{saveReceipt.title}</Text>
+          <Text style={styles.receiptRow}>Date · {receiptDate}</Text>
+          <Text style={styles.receiptRow}>Memory Vault · Saved</Text>
+          {saveReceipt.calendarCreated !== null && (
+            <Text style={styles.receiptRow}>
+              Calendar · {saveReceipt.calendarCreated ? "Event created" : "Not added"}
+            </Text>
+          )}
+          {saveReceipt.reminderScheduled !== null && (
+            <Text style={styles.receiptRow}>
+              Reminder · {saveReceipt.reminderScheduled ? "Scheduled" : "Not scheduled"}
+            </Text>
+          )}
+        </View>
+        <Text style={styles.confirmedText}>You don't need to hold onto this now. I've got it.</Text>
+        <View style={styles.receiptActions}>
+          <Button
+            title="View Memory"
+            onPress={() => router.replace({ pathname: "/(tabs)/actions", params: { memoryId: id ?? "" } })}
+            variant="primary"
+            size="lg"
+            fullWidth
+          />
+          <Button title="Done" onPress={() => router.replace("/(tabs)")} variant="secondary" size="md" fullWidth />
+        </View>
       </View>
     );
   }
@@ -390,7 +458,7 @@ export default function ActionDetailScreen() {
       </View>
 
       <View style={styles.actions}>
-        <Button title="Yes, remember this" onPress={handleConfirm} variant="primary" size="lg" fullWidth loading={updateAction.isPending} />
+        <Button title="Yes, remember this" onPress={handleConfirm} variant="primary" size="lg" fullWidth loading={isSaving} />
         <Button title="✏️ Edit Details" onPress={() => {}} variant="secondary" size="md" fullWidth />
         <Button title="Let this go" onPress={() => router.replace("/(tabs)")} variant="ghost" size="md" fullWidth />
       </View>
@@ -439,12 +507,17 @@ const styles = StyleSheet.create({
   toggleIcon: { fontSize: 18 },
   toggleLabel: { fontSize: 15, color: colors.text.primary },
   actions: { gap: 12, paddingBottom: 40 },
-  confirmedContainer: { flex: 1, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", padding: 32 },
-  confirmedIcon: { fontSize: 64, marginBottom: 20 },
-  confirmedTitle: { fontSize: 28, fontWeight: "800", color: colors.accent.complete, marginBottom: 12 },
-  confirmedText: { fontSize: 16, color: colors.text.muted, textAlign: "center", lineHeight: 22, marginBottom: 32 },
-  backHomeBtn: { backgroundColor: colors.brand.primary, paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12 },
-  backHomeText: { color: colors.white, fontSize: 17, fontWeight: "700" },
+  confirmedContainer: { flex: 1, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", padding: 28 },
+  confirmedTitle: { fontSize: 28, fontWeight: "800", color: colors.deep, marginTop: 12, marginBottom: 16, textAlign: "center" },
+  confirmedText: { fontSize: 16, color: colors.text.muted, textAlign: "center", lineHeight: 22, marginTop: 18, marginBottom: 24 },
+  receiptCard: { alignSelf: "stretch", backgroundColor: colors.white, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 18 },
+  receiptTitle: { color: colors.deep, fontSize: 18, fontWeight: "700", marginBottom: 12 },
+  receiptRow: { color: colors.text.muted, fontSize: 14, lineHeight: 22 },
+  receiptActions: { alignSelf: "stretch", gap: 12 },
+  unavailableContainer: { flex: 1, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", padding: 28 },
+  unavailableTitle: { fontSize: 22, fontWeight: "800", color: colors.deep, textAlign: "center", marginTop: 16, marginBottom: 8 },
+  unavailableText: { fontSize: 15, color: colors.text.muted, textAlign: "center", lineHeight: 22, marginBottom: 24 },
+  unavailableActions: { alignSelf: "stretch", gap: 12 },
 
   // Memory state chips
   memoryChips: { gap: 8, marginBottom: 8 },

@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
-import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
 import { colors, spacing, typography, borderRadius, shadow } from "../../src/constants/colors";
 import { ActionCard } from "../../src/components/actions/ActionCard";
 import { useActions } from "../../src/hooks/useActions";
@@ -27,7 +28,26 @@ const STATUS_MAP: Record<string, "pending" | "confirmed" | "dismissed"> = {
   dismissed: "dismissed",
 };
 export default function ActionsScreen() {
+  const { memoryId } = useLocalSearchParams<{ memoryId?: string }>();
   const { data: actions, isLoading, error, refetch } = useActions();
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+
+  // Defensive UI deadline: the API wrapper has its own timeout/retry, but a
+  // screen must never leave a person staring at placeholders if a platform
+  // request gets stuck below that layer.
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setLoadingTimedOut(true), 20_000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  const retryLoad = () => {
+    setLoadingTimedOut(false);
+    void refetch();
+  };
   const filtered = actions || [];
   const grouped = filtered.reduce((acc: Record<string, ActionItem[]>, a: ActionItem) => {
     const key = a.due_date ? new Date(a.due_date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "Other";
@@ -48,14 +68,18 @@ export default function ActionsScreen() {
         */}
       </View>
       <ScrollView style={styles.list}>
-        {isLoading ? (
+        {isLoading && !loadingTimedOut ? (
           <><Skeleton lines={3} /><Skeleton lines={2} /><Skeleton lines={3} /></>
-        ) : error ? (
+        ) : error || loadingTimedOut ? (
           <View style={styles.empty}>
             <View style={styles.emptyIconWrap}><Icon name="warning" size={34} color={colors.warm.amber} /></View>
-            <Text style={styles.emptyTitle}>Couldn't reach SnapDone</Text>
-            <Text style={styles.emptyText}>Your memories are safe — I just couldn't load them. Check your connection and try again.</Text>
-            <TouchableOpacity style={styles.retryWrap} onPress={() => refetch()}>
+            <Text style={styles.emptyTitle}>{loadingTimedOut ? "Still trying to reach SnapDone" : "Couldn't reach SnapDone"}</Text>
+            <Text style={styles.emptyText}>
+              {loadingTimedOut
+                ? "Your memories are safe. This is taking longer than it should — please try again."
+                : "Your memories are safe — I just couldn't load them. Check your connection and try again."}
+            </Text>
+            <TouchableOpacity style={styles.retryWrap} onPress={retryLoad} accessibilityRole="button" accessibilityLabel="Try loading Memory Vault again">
               <BrandGradient style={styles.retryBtn} rounded={borderRadius.full}>
                 <Text style={styles.retryText}>Try again</Text>
               </BrandGradient>
@@ -80,6 +104,7 @@ export default function ActionsScreen() {
                   detail={a.description}
                   date={a.due_date ? new Date(a.due_date).toLocaleDateString() : undefined}
                   status={STATUS_MAP[a.status] || "pending"}
+                  isHighlighted={memoryId === a.id}
                   onConfirm={() => {}}
                   onEdit={() => router.push(`/action/${a.id}`)}
                   onDismiss={() => {}}
