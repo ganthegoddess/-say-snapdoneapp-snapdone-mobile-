@@ -18,7 +18,7 @@
     "expo-build-properties": "~57.0.10",
     "expo-calendar": "~57.0.1",
     "expo-camera": "~57.0.3",
-    "expo-image-manipulator": "~14.0.0",
+    "expo-image-manipulator": "~57.0.9",
     "expo-image-picker": "~57.0.9",
     "expo-linear-gradient": "~57.0.1",
     "expo-location": "~57.0.9",
