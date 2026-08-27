@@ -7,6 +7,7 @@ import { Skeleton } from "../../src/components/ui/Skeleton";
 import { BrandGradient } from "../../src/components/ui/BrandGradient";
 import { Icon } from "../../src/components/ui/icons";
 import { PipBadge } from "../../src/components/ui/PipBadge";
+import { PipEmptyState } from "../../src/components/ui/PipEmptyState";
 import { pip } from "../../src/constants/pipCopy";
 import type { ActionItem } from "../../src/services/actions";
 // Memory Vault is a pure memory list — no segment/filter controls, no legacy
@@ -61,17 +62,12 @@ export default function ActionsScreen() {
             </TouchableOpacity>
           </View>
         ) : Object.keys(grouped).length === 0 ? (
-          <View style={styles.empty}>
-            <PipBadge size={84} />
-            <Text style={styles.emptyTitle}>{pip.vaultEmpty.title}</Text>
-            <Text style={styles.emptyText}>{pip.vaultEmpty.body}</Text>
-            <TouchableOpacity onPress={() => router.push("/capture")}>
-              <BrandGradient style={styles.emptyCta} rounded={borderRadius.full} colors={colors.gradient.colors}>
-                <Icon name="camera" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.emptyCtaText}>Snap your first memory</Text>
-              </BrandGradient>
-            </TouchableOpacity>
-          </View>
+          <PipEmptyState
+            title={pip.vaultEmpty.title}
+            body={pip.vaultEmpty.body}
+            ctaLabel={pip.vaultEmpty.cta}
+            onCta={() => router.push("/capture")}
+          />
         ) : (
           (Object.entries(grouped) as [string, ActionItem[]][]).map(([dateLabel, items]) => (
             <View key={dateLabel}>

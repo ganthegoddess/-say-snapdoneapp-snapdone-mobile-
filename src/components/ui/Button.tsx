@@ -1,4 +1,5 @@
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from "react-native";
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View, Animated } from "react-native";
+import { useRef } from "react";
 import { colors } from "../../constants/colors";
 import { BrandGradient } from "./BrandGradient";
 /**
@@ -35,27 +36,42 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const isDanger = variant === "danger";
+  // Press micro-interaction (App Motion Spec §1.4): scale →0.97 spring, restore.
+  const pressScale = useRef(new Animated.Value(1)).current;
+  const animatePress = (to: number) => {
+    Animated.spring(pressScale, {
+      toValue: to,
+      damping: 18,
+      stiffness: 260,
+      mass: 1,
+      useNativeDriver: true,
+    }).start();
+  };
   return (
     <TouchableOpacity
       style={[styles.base, styles[`s_${size}`], fullWidth && styles.full, isDisabled && styles.dis]}
       onPress={onPress}
+      onPressIn={() => animatePress(0.97)}
+      onPressOut={() => animatePress(1)}
       disabled={isDisabled}
       activeOpacity={0.7}
     >
-      <BrandGradient
-        style={styles.fill}
-        colors={isDanger ? DANGER_GRADIENT : colors.gradient.colors}
-        rounded={10}
-      >
-        {loading ? (
-          <ActivityIndicator color="#FFFFFF" size="small" />
-        ) : (
-          <View style={styles.content}>
-            {icon && <Text style={styles.icon}>{icon}</Text>}
-            <Text style={[styles.text, styles[`ts_${size}`]]}>{title}</Text>
-          </View>
-        )}
-      </BrandGradient>
+      <Animated.View style={{ transform: [{ scale: pressScale }] }}>
+        <BrandGradient
+          style={styles.fill}
+          colors={isDanger ? DANGER_GRADIENT : colors.gradient.colors}
+          rounded={10}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <View style={styles.content}>
+              {icon && <Text style={styles.icon}>{icon}</Text>}
+              <Text style={[styles.text, styles[`ts_${size}`]]}>{title}</Text>
+            </View>
+          )}
+        </BrandGradient>
+      </Animated.View>
     </TouchableOpacity>
   );
 }
