@@ -1,4 +1,5 @@
 import { uploadFile, post, get } from "./api";
+import { normalizeImageForUpload } from "../lib/imageNormalize";
 import { CAPTURE, UPLOAD_LIMITS } from "../constants/api";
 
 export interface CaptureResult {
@@ -36,10 +37,16 @@ export async function uploadCapture(
   const formData = new FormData();
   const filename = fileUri.split("/").pop() || `capture.${inputType === "image" ? "jpg" : inputType === "audio" ? "m4a" : "pdf"}`;
   const mimeType = inputType === "image" ? "image/jpeg" : inputType === "audio" ? "audio/m4a" : "application/pdf";
-
+  // HEIC→JPEG insurance: iOS cameras default to HEIC; re-encode to a standard
+  // JPEG so a HEIC source can never silently fail on the server (owner's bn17
+  // blocker). Only applied for images; falls back to original on any error.
+  let uploadUri = fileUri;
+  if (inputType === "image") {
+    uploadUri = await normalizeImageForUpload(fileUri);
+  }
   formData.append("file", {
-    uri: fileUri,
-    name: filename,
+    uri: uploadUri,
+    name: uploadUri.endsWith(".heic") ? `${filename.replace(/\.heic$/i, "")}.jpg` : filename,
     type: mimeType,
   } as any);
   formData.append("input_type", inputType);
