@@ -11,6 +11,7 @@ import { PipBadge } from "../../src/components/ui/PipBadge";
 import { PipEmptyState } from "../../src/components/ui/PipEmptyState";
 import { pip } from "../../src/constants/pipCopy";
 import type { ActionItem } from "../../src/services/actions";
+import { formatMemoryDate } from "../../src/utils/dateDisplay";
 // Memory Vault is a pure memory list — no segment/filter controls, no legacy
 // "Lists" IA (owner: "the user never files/organizes"). DESIGN-SYSTEM §3.
 const TYPE_MAP: Record<string, any> = {
@@ -50,7 +51,7 @@ export default function ActionsScreen() {
   };
   const filtered = actions || [];
   const grouped = filtered.reduce((acc: Record<string, ActionItem[]>, a: ActionItem) => {
-    const key = a.due_date ? new Date(a.due_date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "Other";
+    const key = a.due_date ? formatMemoryDate(a.due_date, { weekday: "long", month: "long", day: "numeric" }) : "Other";
     if (!acc[key]) acc[key] = [];
     acc[key].push(a);
     return acc;
@@ -102,7 +103,7 @@ export default function ActionsScreen() {
                   type={TYPE_MAP[a.action_type] || "task"}
                   title={a.title}
                   detail={a.description}
-                  date={a.due_date ? new Date(a.due_date).toLocaleDateString() : undefined}
+                  date={a.due_date ? formatMemoryDate(a.due_date, {}) : undefined}
                   status={STATUS_MAP[a.status] || "pending"}
                   isHighlighted={memoryId === a.id}
                   onConfirm={() => {}}

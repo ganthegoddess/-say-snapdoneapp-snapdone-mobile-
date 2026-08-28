@@ -20,6 +20,7 @@ import { getLocationBadgeIcon } from "../../src/utils/locationContext";
 import { pip, fill, greetingLine, HOME_CAPTURE_ACTIONS } from "../../src/constants/pipCopy";
 import { trackEvent } from "../../src/lib/posthog";
 import type { ActionItem } from "../../src/services/actions";
+import { formatMemoryDate, formatMemoryTime, isMemoryOverdue, isSameLocalCalendarDay } from "../../src/utils/dateDisplay";
 import type { RecalledMemory } from "../../src/services/memories";
 import { CaptureSheet } from "../../src/components/capture/CaptureSheet";
 
@@ -182,14 +183,12 @@ export default function HomeScreen() {
 
   const todayActions = (actions || []).filter((a: ActionItem) => {
     if (!a.due_date) return false;
-    const today = new Date();
-    const due = new Date(a.due_date);
-    return due.toDateString() === today.toDateString();
+    return isSameLocalCalendarDay(a.due_date, new Date());
   });
   const upcomingActions = (actions || []).filter((a: ActionItem) => !todayActions.includes(a));
   const outstandingCount = todayActions.length + upcomingActions.length;
   const overdueCount = (actions || []).filter(
-    (a: ActionItem) => a.due_date && new Date(a.due_date) < new Date() && a.status !== "completed"
+    (a: ActionItem) => a.due_date && isMemoryOverdue(a.due_date) && a.status !== "completed"
   ).length;
 
   // ── Capture sheet (Home stacked actions) ──
@@ -233,15 +232,15 @@ export default function HomeScreen() {
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "";
-    const d = new Date(dateStr);
     const today = new Date();
-    if (d.toDateString() === today.toDateString())
-      return `Today at ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+    const time = formatMemoryTime(dateStr, { hour: "numeric", minute: "2-digit" });
+    if (isSameLocalCalendarDay(dateStr, today))
+      return time ? `Today at ${time}` : "Today";
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    if (d.toDateString() === tomorrow.toDateString())
-      return `Tomorrow at ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
-    return d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+    if (isSameLocalCalendarDay(dateStr, tomorrow))
+      return time ? `Tomorrow at ${time}` : "Tomorrow";
+    return formatMemoryDate(dateStr, { month: "short", day: "numeric", year: "numeric" });
   };
 
   return (
