@@ -19,6 +19,7 @@ import { useUpdateMemoryState } from "../../src/hooks/useMemories";
 import type { MemoryState } from "../../src/services/memories";
 import { FEATURES } from "../../src/constants/features";
 import { Skeleton } from "../../src/components/ui/Skeleton";
+import { formatMemoryDate, formatMemoryTime, parseMemoryDate } from "../../src/utils/dateDisplay";
 
 const CATEGORIES = [
   { key: "event", icon: "📅", label: "Calendar Event", color: colors.brand.primary },
@@ -148,7 +149,7 @@ export default function ActionDetailScreen() {
             ? await scheduleReminder({
                 title: `Reminder: ${action.title}`,
                 body: action.description || "",
-                date: new Date(new Date(action.due_date).getTime() - 15 * 60 * 1000),
+                date: new Date(parseMemoryDate(action.due_date).getTime() - 15 * 60 * 1000),
                 actionId: id,
               })
             : false;
@@ -164,7 +165,7 @@ export default function ActionDetailScreen() {
               await createEvent({
                 title: action.title,
                 notes: action.description,
-                startDate: new Date(action.due_date),
+                startDate: parseMemoryDate(action.due_date),
                 location: action.location || undefined,
                 alarms: [{ relativeOffset: -15 }],
               });
@@ -224,12 +225,12 @@ export default function ActionDetailScreen() {
 
   const actionTitle = action.title;
   const actionDetail = action.description || "No additional details";
-  const actionDate = action.due_date ? new Date(action.due_date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "No date attached";
-  const actionTime = action.due_date ? new Date(action.due_date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "No time attached";
+  const actionDate = action.due_date ? formatMemoryDate(action.due_date, { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "No date attached";
+  const actionTime = action.due_date ? (formatMemoryTime(action.due_date, { hour: "numeric", minute: "2-digit" }) || "No time attached") : "No time attached";
 
   if (saveReceipt) {
     const receiptDate = saveReceipt.date
-      ? new Date(saveReceipt.date).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })
+      ? formatMemoryDate(saveReceipt.date, { weekday: "long", month: "long", day: "numeric" })
       : "No date attached";
     return (
       <View style={styles.confirmedContainer}>
