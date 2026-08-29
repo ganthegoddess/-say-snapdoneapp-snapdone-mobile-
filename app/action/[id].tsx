@@ -27,6 +27,7 @@ const CATEGORIES = [
   { key: "list-item", icon: "📋", label: "List Item", color: colors.brand.primary },
   { key: "bill", icon: "💰", label: "Bill", color: colors.error },
   { key: "task", icon: "✅", label: "Task", color: colors.accent.complete },
+  { key: "note", icon: "📝", label: "Note", color: colors.deep },
 ];
 
 const PRIORITIES = [
@@ -327,7 +328,7 @@ export default function ActionDetailScreen() {
             <TouchableOpacity
               key={c.key}
               style={[styles.chip, category === c.key && { backgroundColor: c.color + "20", borderColor: c.color }]}
-              onPress={() => setCategory(c.key as "event" | "reminder" | "grocery_list" | "bill" | "task")}
+              onPress={() => setCategory(c.key as "event" | "reminder" | "grocery_list" | "bill" | "task" | "note")}
             >
               <Text style={styles.chipIcon}>{c.icon}</Text>
               <Text style={[styles.chipLabel, category === c.key && { color: c.color }]}>{c.label}</Text>

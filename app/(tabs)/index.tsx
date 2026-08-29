@@ -49,6 +49,7 @@ const TYPE_MAP: Record<string, string> = {
   bill: "bill",
   task: "task",
   grocery_list: "list-item",
+  note: "note",
 };
 
 const STATUS_MAP: Record<string, "pending" | "confirmed" | "dismissed"> = {
