@@ -13,6 +13,7 @@ import * as captureService from "../../services/capture";
 import { trackEvent } from "../../lib/posthog";
 import { isUpgradeRequired } from "../../hooks/useCapture";
 import { Icon } from "../ui/icons";
+import { PressScale } from "../ui/PressScale";
 
 /** FILLED premium capture-pill fill (owner B direction): full-opacity brand tint gradient. */
 function tintFill(base: string): [string, string] {
@@ -295,7 +296,7 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
           {!voiceMode && !noteMode && (
             <>
               {CAPTURE_MODES.map((m) => (
-                <TouchableOpacity key={m.key} style={styles.sheetOptionShadow} onPress={m.onPress} activeOpacity={0.85}>
+                <PressScale key={m.key} style={styles.sheetOptionShadow} onPress={m.onPress} accessibilityLabel={m.title}>
                   <LinearGradient
                     colors={tintFill(m.tint)}
                     start={{ x: 0, y: 0 }}
@@ -305,7 +306,7 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
                     <Icon name={m.icon} size={30} color="#FFFFFF" />
                     <Text style={styles.sheetText}>{m.title}</Text>
                   </LinearGradient>
-                </TouchableOpacity>
+                </PressScale>
               ))}
             </>
           )}

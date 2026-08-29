@@ -226,7 +226,15 @@ export function usePipAnimationValues(): PipAnimationValues {
 
 let idleLoopRunning = false;
 
+// Reduced-motion guard (device accessibility setting). When on, every loop and
+// one-shot is suppressed so PIP stays a static, calm presence (App Motion Spec §6).
+let reduceMotionActive = false;
+export function setReduceMotion(on: boolean) {
+  reduceMotionActive = on;
+}
+
 function startIdleLoop(v: PipAnimationValues, config: StateConfig) {
+  if (reduceMotionActive) return;
   if (idleLoopRunning) return;
   idleLoopRunning = true;
 
@@ -279,8 +287,10 @@ function startIdleLoop(v: PipAnimationValues, config: StateConfig) {
 
 function startBlinkLoop(v: PipAnimationValues) {
   const scheduleBlink = () => {
+    if (reduceMotionActive) return;
     const delay = 5000 + Math.random() * 5000; // 5-10s
     setTimeout(() => {
+      if (reduceMotionActive) return;
       // Blink: close 150ms, open 150ms (designer spec 2.2)
       v.blink.value = withSequence(
         withTiming(0.05, { duration: 150, easing: Easing.inOut(Easing.sin) }),
@@ -302,6 +312,20 @@ export function cancelIdleLoop() {
 
 export function animateToState(v: PipAnimationValues, state: PipState) {
   const config = STATE_CONFIGS[state];
+
+  // Reduced motion: set final values statically — no loops, no transitions.
+  if (reduceMotionActive) {
+    v.orbScale.value = config.orbScale;
+    v.orbOpacity.value = config.opacity;
+    v.glowIntensity.value = config.glowIntensity;
+    v.particleOpacity.value = config.particleOpacity;
+    v.tailOpacity.value = config.tailOpacity;
+    v.sparkleOpacity.value = 0;
+    v.floatOffset.value = 0;
+    v.posX.value = 0;
+    return;
+  }
+
   const ease = Easing.inOut(Easing.sin);
 
   // Core values
@@ -383,6 +407,13 @@ export function playSignatureAnimation(
   v: PipAnimationValues,
   onComplete?: () => void,
 ) {
+  // Reduced motion: no catch choreography — just settle and notify.
+  if (reduceMotionActive) {
+    animateToState(v, "idle");
+    onComplete?.();
+    return;
+  }
+
   const config = STATE_CONFIGS.remembered;
 
   // Phase 1-3: Orb gently scales up as particle approaches
