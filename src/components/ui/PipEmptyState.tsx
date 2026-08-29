@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { colors, spacing, borderRadius } from "../../constants/colors";
-import { Pip } from "./Pip";
+import { PipWisp } from "../PipWisp";
 import { BrandGradient } from "./BrandGradient";
 
 interface PipEmptyStateProps {
@@ -22,7 +22,7 @@ export function PipEmptyState({ title, body, ctaLabel, onCta }: PipEmptyStatePro
     <View style={styles.container}>
       {/* PIP zone — reserved, alive */}
       <View style={styles.pipZone}>
-        <Pip state="idle" size={112} />
+        <PipWisp state="idle" size={112} inline />
       </View>
       {/* 16px gap then copy */}
       <Text style={styles.title}>{title}</Text>

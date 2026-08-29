@@ -18,7 +18,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View, Text, Image } from "react-native";
+import { StyleSheet, View, Text, Image, AccessibilityInfo } from "react-native";
 import Svg, {
   Circle,
   Defs,
@@ -43,6 +43,7 @@ import {
   playSignatureAnimation,
   usePipStyles,
   cancelIdleLoop,
+  setReduceMotion,
   type PipState,
   type PipPosition,
   POSITION_MAP,
@@ -83,27 +84,13 @@ const PIP_COLORS = {
 } as const;
 
 // ──────────────────────────────────────────────
-//  Per-state orb sizes (designer spec section 4.3 — 15% smaller)
+//  Per-state particle counts (designer spec section 4.3)
 // ──────────────────────────────────────────────
-
-const ORB_SIZES: Record<PipState, number> = {
-  idle:      24,
-  listening: 27,
-  thinking:  26,
-  searching: 26,
-  remembered:29,
-  success:   27,
-};
-
-const AURA_EXTENTS: Record<PipState, number> = {
-  idle:      31,
-  listening: 37,
-  thinking:  36,
-  searching: 34,
-  remembered:41,
-  success:   41,
-};
-
+// NOTE (fidelity fix): the aura/glow/particle radii are NOT absolute "orb pt"
+// anymore — they scale with the `size` prop (the canonical PNG is composited
+// into the full container). The canonical pip-300px.png carries its solid
+// character in the central ~40% of the canvas, so the ambient halo and
+// particles are sized relative to `size` below.
 const PARTICLE_COUNTS: Record<PipState, number> = {
   idle:      3,
   listening: 8,
@@ -206,15 +193,15 @@ export const PipWisp: React.FC<PipWispProps> = ({
   const { orbContainerStyle } = usePipStyles(v);
   const pos = POSITION_MAP[position];
 
-  // Per-state dimensions
-  const orbSize = ORB_SIZES[state];
-  const auraSize = AURA_EXTENTS[state];
-  const orbR = orbSize / 2;
-  const auraR = auraSize / 2;
-  const outerGlowR = auraR * 1.3;
+  // Per-state dimensions — scale with `size` (the canonical PNG fills the
+  // container). The solid character occupies the central ~40% of the canvas:
+  //   charRadius ≈ size * 0.22  (visual radius of the character)
+  //   haloR      ≈ size * 0.50  (ambient halo behind the character)
+  const charRadius = size * 0.22;
+  const haloR = size * 0.5;
   const particles = useMemo(
-    () => makeParticles(PARTICLE_COUNTS[state], orbR),
-    [state, orbR],
+    () => makeParticles(PARTICLE_COUNTS[state], charRadius),
+    [state, charRadius],
   );
 
   // ── Eye expression shared values (designer spec section 2.2) ──
@@ -266,10 +253,24 @@ export const PipWisp: React.FC<PipWispProps> = ({
     return () => cancelIdleLoop();
   }, []);
 
+  // Respect device reduce-motion: suppress all loops/one-shots so PIP stays a
+  // calm static presence (App Motion Spec §6). The flag is read by the
+  // animation engine (startIdleLoop / animateToState / playSignatureAnimation).
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((on) => {
+      if (!mounted) return;
+      setReduceMotion(on);
+    });
+    return () => {
+      mounted = false;
+      setReduceMotion(false);
+    };
+  }, []);
+
   // ── Gradient IDs (unique per instance) ──
   const glows = useMemo(() => ({
     aura: `a-${Math.random().toString(36).slice(2, 8)}`,
-    core: `c-${Math.random().toString(36).slice(2, 8)}`,
   }), []);
 
   const captionText = CAPTION_BY_STAGE[relationshipStage];
@@ -305,35 +306,20 @@ export const PipWisp: React.FC<PipWispProps> = ({
             <Stop offset="50%" stopColor={PIP_COLORS.outerGlow} stopOpacity={0.1} />
             <Stop offset="100%" stopColor={PIP_COLORS.outerGlow} stopOpacity={0} />
           </RadialGradient>
-          {/* Core gradient (warm ivory → soft gold) — kept for the glow falloff */}
-          <RadialGradient id={glows.core} cx="50%" cy="40%" r="50%">
-            <Stop offset="0%" stopColor={PIP_COLORS.primaryGlow} stopOpacity={1} />
-            <Stop offset="45%" stopColor={PIP_COLORS.innerCore} stopOpacity={0.9} />
-            <Stop offset="100%" stopColor={PIP_COLORS.innerCore} stopOpacity={0.25} />
-          </RadialGradient>
         </Defs>
 
-        {/* Layer 1: Outer aura — the animated environment glow AROUND the canonical asset */}
+        {/* Layer 1: Ambient halo — ONE soft radial layer BEHIND the canonical
+            asset (subtle glow only, no double-glow). The PNG already bakes in
+            its own warm glow + lavender aura; this is the gentle "alive" breathe
+            field that animates behind it. */}
         <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
-          r={outerGlowR}
+          r={haloR}
           fill={`url(#${glows.aura})`}
           animatedProps={useAnimatedProps(() => ({
-            opacity: v.glowIntensity.value * 0.6,
-            r: outerGlowR * v.orbScale.value,
-          }))}
-        />
-
-        {/* Layer 2: Primary glow */}
-        <AnimatedCircle
-          cx={size / 2}
-          cy={size / 2}
-          r={auraR}
-          fill={PIP_COLORS.primaryGlow}
-          animatedProps={useAnimatedProps(() => ({
-            opacity: v.glowIntensity.value * 0.35,
-            r: auraR * v.orbScale.value,
+            opacity: v.glowIntensity.value * 0.55,
+            r: haloR * v.orbScale.value,
           }))}
         />
       </Svg>
@@ -372,9 +358,9 @@ export const PipWisp: React.FC<PipWispProps> = ({
         >
           {[0, 72, 144, 216, 288].map((angle) => {
             const rad = (angle * Math.PI) / 180;
-            const len = orbR * 0.5;
-            const ex = size / 2 + Math.cos(rad) * (orbR + 5);
-            const ey = size / 2 + Math.sin(rad) * (orbR + 5);
+            const len = charRadius * 0.5;
+            const ex = size / 2 + Math.cos(rad) * (charRadius * 1.5);
+            const ey = size / 2 + Math.sin(rad) * (charRadius * 1.5);
             return (
               <AnimatedPath
                 key={angle}

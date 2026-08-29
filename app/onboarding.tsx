@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { colors } from "../src/constants/colors";
 import { PipWisp } from "../src/components/PipWisp";
 import { BrandGradient } from "../src/components/ui/BrandGradient";
+import { PressScale } from "../src/components/ui/PressScale";
 import { Icon } from "../src/components/ui/icons";
 import { useAuthStore } from "../src/stores/authStore";
 import { pip, fill, HOME_CAPTURE_ACTIONS } from "../src/constants/pipCopy";
@@ -33,9 +34,9 @@ export default function OnboardingScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      {/* Canonical PIP — the first thing a user meets (DESIGN-SYSTEM §7.5) */}
+      {/* Canonical PIP — the first thing a user meets (DESIGN-SYSTEM §7.5, hero 260dp) */}
       <View style={styles.pipArea}>
-        <PipWisp state="idle" position="center-screen" size={132} background="light" />
+        <PipWisp state="idle" position="center-screen" size={260} background="light" />
       </View>
 
       <Text style={styles.greeting}>
@@ -70,11 +71,11 @@ export default function OnboardingScreen() {
       </View>
 
       {/* Primary CTA — rich gradient, white label (cohesion rule §6.3) */}
-      <TouchableOpacity onPress={handleDone} style={styles.doneWrap} activeOpacity={0.85}>
+      <PressScale onPress={handleDone} style={styles.doneWrap} accessibilityLabel="Done">
         <BrandGradient style={styles.done} rounded={28}>
           <Text style={styles.doneText}>Done.</Text>
         </BrandGradient>
-      </TouchableOpacity>
+      </PressScale>
       <TouchableOpacity onPress={handleDone} style={styles.skip}>
         <Text style={styles.skipText}>Skip for now</Text>
       </TouchableOpacity>
@@ -85,7 +86,7 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   content: { alignItems: "center", paddingHorizontal: 28, paddingTop: 80, paddingBottom: 48 },
-  pipArea: { marginBottom: 20, height: 132, alignItems: "center" },
+  pipArea: { marginBottom: 12, height: 260, alignItems: "center" },
   greeting: { fontSize: 32, fontWeight: "800", color: colors.ink, textAlign: "center", marginBottom: 12 },
   subtitle: { fontSize: 17, color: colors.muted, textAlign: "center", lineHeight: 26, paddingHorizontal: 8 },
   gotIt: { fontSize: 22, color: colors.accent.amberDeep, fontWeight: "800", marginTop: 12, textAlign: "center" },

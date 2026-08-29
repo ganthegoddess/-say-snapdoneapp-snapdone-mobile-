@@ -27,6 +27,7 @@ import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { router } from "expo-router";
 import { colors, typography, borderRadius, spacing } from "../../constants/colors";
 import { PipWisp } from "../PipWisp";
+import { Reveal } from "../ui/Reveal";
 import { Badge } from "../ui/Badge";
 import { trackEvent } from "../../lib/posthog";
 import type { MemoryPayload } from "../../types";
@@ -349,9 +350,11 @@ interface SnapBackCardProps {
   memory: MemoryPayload;
   recallReason?: string;
   onArchive?: () => void;
+  /** Position in a list, for staggered entrance (i * 120ms, capped 500ms). */
+  index?: number;
 }
 
-export function SnapBackCard({ memory, recallReason, onArchive }: SnapBackCardProps) {
+export function SnapBackCard({ memory, recallReason, onArchive, index }: SnapBackCardProps) {
   const { action, original, context, pip } = memory;
   const inputConfig = INPUT_TYPE_CONFIG[original.input_type] || INPUT_TYPE_CONFIG.text;
 
@@ -401,7 +404,8 @@ export function SnapBackCard({ memory, recallReason, onArchive }: SnapBackCardPr
   };
 
   return (
-    <View style={styles.card}>
+    <Reveal delayMs={Math.min((index ?? 0) * 120, 500)}>
+      <View style={styles.card}>
       {/* PIP message bar */}
       {pip?.message != null && pip.message !== "" ? <PipMessageBar message={pip.message} /> : null}
 
@@ -453,7 +457,8 @@ export function SnapBackCard({ memory, recallReason, onArchive }: SnapBackCardPr
           <Text style={styles.archiveBtnText}>Archive</Text>
         </TouchableOpacity>
       ) : null}
-    </View>
+      </View>
+    </Reveal>
   );
 }
 

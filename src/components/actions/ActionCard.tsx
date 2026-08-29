@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { colors } from "../../constants/colors";
+import { Reveal } from "../ui/Reveal";
 
 type ActionType = "event" | "reminder" | "list-item" | "bill" | "task";
 type ActionStatus = "pending" | "confirmed" | "dismissed";
@@ -19,6 +20,8 @@ interface ActionCardProps {
   isAssignedToMe?: boolean;
   /** Highlighted when navigated from PIP's saved-memory receipt. */
   isHighlighted?: boolean;
+  /** Position in a list, for staggered entrance (i * 120ms, capped 500ms). */
+  index?: number;
   onConfirm?: () => void;
   onEdit?: () => void;
   onDismiss?: () => void;
@@ -32,14 +35,15 @@ const TYPE_CONFIG: Record<ActionType, { icon: string; color: string; label: stri
   task: { icon: "✅", color: colors.accent.complete, label: "Task" },
 };
 
-export function ActionCard({ type, title, detail, date, amount, status, source, assigneeName, isAssignedToMe, isHighlighted, onConfirm, onEdit, onDismiss }: ActionCardProps) {
+export function ActionCard({ type, title, detail, date, amount, status, source, assigneeName, isAssignedToMe, isHighlighted, index, onConfirm, onEdit, onDismiss }: ActionCardProps) {
   const config = TYPE_CONFIG[type];
   const isDone = status === "confirmed";
   const isDismissed = status === "dismissed";
   if (isDismissed) return null;
 
   return (
-    <View style={[styles.card, isDone && styles.cardDone, isHighlighted && styles.cardHighlighted]}>
+    <Reveal delayMs={Math.min((index ?? 0) * 120, 500)}>
+      <View style={[styles.card, isDone && styles.cardDone, isHighlighted && styles.cardHighlighted]}>
       <View style={styles.header}>
         <View style={styles.typeRow}>
           <Text style={styles.typeIcon}>{config.icon}</Text>
@@ -73,7 +77,8 @@ export function ActionCard({ type, title, detail, date, amount, status, source, 
         </View>
       )}
       {isDone && <View style={styles.doneBadge}><Text style={styles.doneText}>Got it</Text></View>}
-    </View>
+      </View>
+    </Reveal>
   );
 }
 

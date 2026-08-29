@@ -9,6 +9,8 @@ import { ActionCard } from "../../src/components/actions/ActionCard";
 import { SnapBackCard } from "../../src/components/memories/SnapBackCard";
 import { PipWisp } from "../../src/components/PipWisp";
 import { BrandGradient } from "../../src/components/ui/BrandGradient";
+import { PressScale } from "../../src/components/ui/PressScale";
+import { Reveal } from "../../src/components/ui/Reveal";
 import { Icon } from "../../src/components/ui/icons";
 import { useActions } from "../../src/hooks/useActions";
 import { useCompleteAction, useDeleteAction } from "../../src/hooks/useActions";
@@ -251,35 +253,43 @@ export default function HomeScreen() {
           <View style={styles.pipHero}>
             <PipWisp state="idle" size={300} background="light" inline />
           </View>
-          {(() => {
-            const g = greetingLine(user?.displayName, {
-              memoryCount: (actions || []).length,
-              outstanding: outstandingCount,
-              overdue: overdueCount,
-            });
-            return (
-              <>
-                <Text style={styles.greeting}>{g.greeting}</Text>
-                <Text style={styles.headline}>{g.reassurance}</Text>
-              </>
-            );
-          })()}
+          <Reveal delayMs={200}>
+            {(() => {
+              const g = greetingLine(user?.displayName, {
+                memoryCount: (actions || []).length,
+                outstanding: outstandingCount,
+                overdue: overdueCount,
+              });
+              return (
+                <>
+                  <Text style={styles.greeting}>{g.greeting}</Text>
+                  <Text style={styles.headline}>{g.reassurance}</Text>
+                </>
+              );
+            })()}
+          </Reveal>
         </View>
 
         {/* Stacked capture actions — Snap something / Tell me / Type it (no Upload on Home) */}
         <View style={styles.captureStack}>
-          {HOME_CAPTURE_ACTIONS.map((a) => (
-            <TouchableOpacity key={a.key} style={styles.captureAction} onPress={() => handleCaptureAction(a.key)} activeOpacity={0.86}>
-              <LinearGradient
-                colors={tintFill(a.tint)}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={styles.capturePill}
+          {HOME_CAPTURE_ACTIONS.map((a, i) => (
+            <Reveal key={a.key} delayMs={i * 80} distance={10}>
+              <PressScale
+                style={styles.captureAction}
+                onPress={() => handleCaptureAction(a.key)}
+                accessibilityLabel={a.label}
               >
-                <Icon name={a.icon} size={34} color="#FFFFFF" />
-                <Text style={styles.captureActionLabel}>{a.label}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={tintFill(a.tint)}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={styles.capturePill}
+                >
+                  <Icon name={a.icon} size={34} color="#FFFFFF" />
+                  <Text style={styles.captureActionLabel}>{a.label}</Text>
+                </LinearGradient>
+              </PressScale>
+            </Reveal>
           ))}
         </View>
       </View>
@@ -294,9 +304,10 @@ export default function HomeScreen() {
                 <Text style={styles.pipDismiss}>✕</Text>
               </TouchableOpacity>
             </View>
-            {pipMemories.map((m) => (
+            {pipMemories.map((m, i) => (
               <SnapBackCard
                 key={`pip-${m.action.id}`}
+                index={i}
                 memory={m}
                 recallReason={m.recall_reason}
                 onArchive={() => handleArchiveMemory(m.action.id)}
@@ -353,9 +364,10 @@ export default function HomeScreen() {
             {todayActions.length > 0 && (
               <View>
                 <Text style={styles.sectionTitle}>Today</Text>
-                {todayActions.map((a: ActionItem) => (
+                {todayActions.map((a: ActionItem, i: number) => (
                   <ActionCard
                     key={a.id}
+                    index={i}
                     type={(TYPE_MAP[a.action_type] || "task") as any}
                     title={a.title}
                     detail={a.description}
@@ -373,9 +385,10 @@ export default function HomeScreen() {
             {upcomingActions.length > 0 && (
               <View style={{ marginTop: 8 }}>
                 <Text style={styles.sectionTitle}>Upcoming</Text>
-                {upcomingActions.map((a: ActionItem) => (
+                {upcomingActions.map((a: ActionItem, i: number) => (
                   <ActionCard
                     key={a.id}
+                    index={i}
                     type={(TYPE_MAP[a.action_type] || "task") as any}
                     title={a.title}
                     detail={a.description}
