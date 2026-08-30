@@ -209,18 +209,27 @@ export const PipWisp: React.FC<PipWispProps> = ({
   const rightEyeSquint = useSharedValue(1);
   const eyeScanX = useSharedValue(0);
 
-  // ── Particle frame for thinking-state orbit (45s per revolution) ──
+  // ── Particle frame: ambient drift (idle) + orbit (thinking) ──
+  // The frame advances only for states whose particles animate. Previously only
+  // "thinking" advanced it, so a PIP mounting into "idle" kept frame at 0 and
+  // the 3 glow dots never moved.
   const [particleFrame, setParticleFrame] = useState(0);
 
   useEffect(() => {
-    if (state !== "thinking") {
+    // One full 0→1 frame cycle per state (ms). Idle = gentle ambient drift;
+    // thinking keeps the designer's 45s orbit.
+    const CYCLE_MS: Partial<Record<PipState, number>> = {
+      idle: 12000,
+      thinking: 45000,
+    };
+    const cycleMs = CYCLE_MS[state];
+    if (!cycleMs) {
       setParticleFrame(0);
       return;
     }
-    const ORBIT_MS = 45000;
     const TICK_MS = 200;
     const interval = setInterval(() => {
-      setParticleFrame((prev) => (prev + TICK_MS / ORBIT_MS) % 1);
+      setParticleFrame((prev) => (prev + TICK_MS / cycleMs) % 1);
     }, TICK_MS);
     return () => clearInterval(interval);
   }, [state]);
@@ -230,7 +239,10 @@ export const PipWisp: React.FC<PipWispProps> = ({
   onCaughtRef.current = onCaught;
 
   // ── State transition + auto-trigger signature animation ──
-  const prevState = useRef<PipState>("idle");
+  // prevState starts null so the FIRST run always fires (mounts directly into
+  // "idle" would otherwise be skipped by the `from !== state` guard, leaving
+  // the idle loop never started and the homescreen PIP frozen).
+  const prevState = useRef<PipState | null>(null);
   useEffect(() => {
     const from = prevState.current;
     if (from !== state) {
@@ -245,13 +257,13 @@ export const PipWisp: React.FC<PipWispProps> = ({
 
       prevState.current = state;
     }
-    return () => cancelIdleLoop();
+    return () => cancelIdleLoop(v);
   }, [state, v]);
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => cancelIdleLoop();
-  }, []);
+    return () => cancelIdleLoop(v);
+  }, [v]);
 
   // Respect device reduce-motion: suppress all loops/one-shots so PIP stays a
   // calm static presence (App Motion Spec §6). The flag is read by the
@@ -318,7 +330,10 @@ export const PipWisp: React.FC<PipWispProps> = ({
           r={haloR}
           fill={`url(#${glows.aura})`}
           animatedProps={useAnimatedProps(() => ({
-            opacity: v.glowIntensity.value * 0.55,
+            // glowIntensity sets the ambient base; pulseValue adds the slow
+            // "breathing" oscillation so the aura visibly lives (designer spec
+            // §2.4 — breathing glow). Both stay positive for every state config.
+            opacity: (v.glowIntensity.value + v.pulseValue.value) * 0.55,
             r: haloR * v.orbScale.value,
           }))}
         />
