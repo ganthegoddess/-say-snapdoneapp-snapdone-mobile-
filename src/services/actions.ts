@@ -3,7 +3,7 @@ import { ACTIONS } from "../constants/api";
 
 export interface ActionItem {
   id: string;
-  action_type: "reminder" | "event" | "grocery_list" | "bill" | "task";
+  action_type: "reminder" | "event" | "grocery_list" | "bill" | "task" | "note";
   title: string;
   description?: string;
   status: "active" | "completed" | "dismissed" | "pending_confirmation";

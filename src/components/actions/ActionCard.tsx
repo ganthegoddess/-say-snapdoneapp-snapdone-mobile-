@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { colors } from "../../constants/colors";
 import { Reveal } from "../ui/Reveal";
 
-type ActionType = "event" | "reminder" | "list-item" | "bill" | "task";
+type ActionType = "event" | "reminder" | "list-item" | "bill" | "task" | "note";
 type ActionStatus = "pending" | "confirmed" | "dismissed";
 type CaptureSource = "photo" | "screenshot" | "voice" | "email";
 
@@ -33,6 +33,7 @@ const TYPE_CONFIG: Record<ActionType, { icon: string; color: string; label: stri
   "list-item": { icon: "📋", color: colors.brand.primary, label: "List" },
   bill: { icon: "💰", color: colors.error, label: "Bill" },
   task: { icon: "✅", color: colors.accent.complete, label: "Task" },
+  note: { icon: "📝", color: colors.deep, label: "Note" },
 };
 
 export function ActionCard({ type, title, detail, date, amount, status, source, assigneeName, isAssignedToMe, isHighlighted, index, onConfirm, onEdit, onDismiss }: ActionCardProps) {

@@ -21,10 +21,11 @@ const TYPE_MAP: Record<string, any> = {
   bill: "bill",
   task: "task",
   grocery_list: "list-item",
+  note: "note",
 };
 const STATUS_MAP: Record<string, "pending" | "confirmed" | "dismissed"> = {
   pending_confirmation: "pending",
-  active: "pending",
+  active: "confirmed",
   completed: "confirmed",
   dismissed: "dismissed",
 };
