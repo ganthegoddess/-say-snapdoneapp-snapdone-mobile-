@@ -198,9 +198,19 @@ export default function HomeScreen() {
   const [sheetVisible, setSheetVisible] = useState(false);
   const [sheetMode, setSheetMode] = useState<"photo" | "voice" | "note" | undefined>(undefined);
   const handleCaptureAction = (routeKey: string) => {
-    // snap → photo mode (Home action keys: snap / tell / type)
-    const mode = routeKey === "snap" ? "photo" : routeKey === "tell" ? "voice" : "note";
-    setSheetMode(mode as "photo" | "voice" | "note");
+    // "snap" navigates straight to the camera screen. It never actually uses
+    // the capture-sheet menu — the old path opened the sheet in "photo" mode,
+    // which immediately auto-closed it (takePhoto → handleClose) and pushed
+    // /capture. That auto-open/auto-close relied on a `didOpen` ref guard in
+    // CaptureSheet that could stick, so a second tap on "Snap something" after
+    // backing out of the camera became a no-op. Navigate directly so the
+    // action is reliable on every tap.
+    if (routeKey === "snap") {
+      router.push("/capture");
+      return;
+    }
+    const mode = routeKey === "tell" ? "voice" : "note";
+    setSheetMode(mode as "voice" | "note");
     setSheetVisible(true);
   };
 
@@ -408,7 +418,14 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
-      <CaptureSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} initialMode={sheetMode} />
+      <CaptureSheet
+        visible={sheetVisible}
+        onClose={() => {
+          setSheetVisible(false);
+          setSheetMode(undefined);
+        }}
+        initialMode={sheetMode}
+      />
     </View>
   );
 }

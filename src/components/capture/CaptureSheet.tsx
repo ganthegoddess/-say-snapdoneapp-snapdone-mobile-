@@ -102,6 +102,12 @@ export function CaptureSheet({ visible, onClose, initialMode }: CaptureSheetProp
     setError(null);
   };
   const handleClose = () => {
+    // Always reset the auto-open guard when the sheet closes. The guard only
+    // auto-resets through the `!visible` effect branch; resetting it here too
+    // makes reopening reliable even if a close path (e.g. takePhoto → navigate)
+    // races past that branch, which is what made a second "Snap something" tap
+    // a silent no-op on bn20.
+    didOpen.current = false;
     reset();
     onClose();
   };
