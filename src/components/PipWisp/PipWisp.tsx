@@ -22,6 +22,7 @@ import { StyleSheet, View, Text, Image, AccessibilityInfo } from "react-native";
 import Svg, {
   Circle,
   Defs,
+  Ellipse,
   RadialGradient,
   Stop,
   Path,
@@ -61,6 +62,7 @@ const CANONICAL_PIP = require("../../assets/images/pip/pip-300px.png") as number
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedG = Animated.createAnimatedComponent(G);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 
 // ──────────────────────────────────────────────
 //  PIP Color Palette (white-background spec — designer rev 2026-07-29)
@@ -82,6 +84,23 @@ const PIP_COLORS = {
   rim:        "rgba(160, 120, 60, 0.18)",  // Definition line — non-negotiable
   cardGlow:   "#FDB963",        // Card reflection color
 } as const;
+
+// ──────────────────────────────────────────────
+//  Eyelid overlay (owner-approved blink, Aug 30)
+// ──────────────────────────────────────────────
+// The canonical pip-300px.png is composited VERBATIM and can't blink on its
+// own, so PIP blinks by overlaying two "eyelid" ellipses over the PNG's eyes,
+// filled with the face colour sampled from the PNG itself just above each eye.
+//
+// Eye geometry mirrors the website's canonical PipWeb.tsx (orbR = size * 0.32):
+//   eyeR = orbR * 0.22 · eyeOffsetX = orbR * 0.35 · eyeOffsetY = orbR * 0.10
+//   eye rx = eyeR * 0.75 · eye ry = eyeR
+// Verified against pip-300px.png (300px): eyes centred at (116,140) & (183,140),
+// rx≈15, ry≈20 — matching the formula. Eyelid fill sampled from the PNG at
+// (116,118) and (183,118): median rgb(233,154,38) → #E99A26 (the face just
+// above the eye), NOT guessed.
+const EYELID_FILL = "#E99A26";
+const EYELID_COVER = 1.08; // slight over-cover so the closed lid fully hides the eye
 
 // ──────────────────────────────────────────────
 //  Per-state particle counts (designer spec section 4.3)
@@ -203,6 +222,34 @@ export const PipWisp: React.FC<PipWispProps> = ({
     () => makeParticles(PARTICLE_COUNTS[state], charRadius),
     [state, charRadius],
   );
+
+  // ── Eyelid overlay geometry (owner-approved blink) ──
+  // Mirrors the website PipWeb.tsx eye geometry, scaled to `size` (the
+  // canonical PNG fills the container). Eyelids are two face-coloured ellipses
+  // over the PNG's eyes, top-anchored and vertically scaled by v.blink so PIP
+  // closes (blink → 0.05) and opens (blink → 1).
+  const orbR = size * 0.32;
+  const eyeR = orbR * 0.22;
+  const eyeOffsetX = orbR * 0.35;
+  const eyeOffsetY = orbR * 0.10;
+  const eyeCx = size / 2;
+  const eyeCy = size / 2 - eyeOffsetY;
+  const eyeRx = eyeR * 0.75;
+  const eyeRy = eyeR;
+  const leftEyeCx = eyeCx - eyeOffsetX;
+  const rightEyeCx = eyeCx + eyeOffsetX;
+
+  // Both lids share one animation (they blink together); cx/rx stay static and
+  // only cy/ry are animated on the UI thread. Top-anchored: when blink=1 (open)
+  // the lid collapses to a point at the eye's top edge; when blink=0 (closed)
+  // it grows down to fully cover the eye.
+  const eyelidAnimatedProps = useAnimatedProps(() => {
+    const closeness = 1 - v.blink.value; // 0 = open, 1 = closed
+    return {
+      cy: eyeCy - eyeRy * EYELID_COVER * v.blink.value,
+      ry: eyeRy * EYELID_COVER * closeness,
+    };
+  });
 
   // ── Eye expression shared values (designer spec section 2.2) ──
   const leftEyeSquint = useSharedValue(1);
@@ -350,6 +397,24 @@ export const PipWisp: React.FC<PipWispProps> = ({
       />
 
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={StyleSheet.absoluteFill}>
+        {/* Eyelid overlay (owner-approved blink) — two face-coloured ellipses
+            drawn ABOVE the canonical PNG, top-anchored and driven by v.blink.
+            This lets PIP visibly close/open its eyes without redrawing the
+            locked pip-300px.png. When blink=1 (open) each lid collapses to a
+            point at the eye's top edge; when blink=0 (closed) it covers the eye. */}
+        <AnimatedEllipse
+          cx={leftEyeCx}
+          rx={eyeRx * EYELID_COVER}
+          fill={EYELID_FILL}
+          animatedProps={eyelidAnimatedProps}
+        />
+        <AnimatedEllipse
+          cx={rightEyeCx}
+          rx={eyeRx * EYELID_COVER}
+          fill={EYELID_FILL}
+          animatedProps={eyelidAnimatedProps}
+        />
+
         {/* Particles — orbit AROUND the composited character */}
         <AnimatedG
           animatedProps={useAnimatedProps(() => ({
