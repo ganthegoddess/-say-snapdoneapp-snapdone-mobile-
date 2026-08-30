@@ -202,29 +202,49 @@ export function usePipAnimationValues(): PipAnimationValues {
   const floatPhase = useMemo(() => Math.random() * Math.PI * 2, []);
   const pulsePhase = useMemo(() => Math.random() * Math.PI * 2, []);
 
-  return {
-    orbScale:        useSharedValue(1.0),
-    orbOpacity:      useSharedValue(0.7),
-    glowIntensity:   useSharedValue(0.35),
-    floatOffset:     useSharedValue(0),
-    pulseValue:      useSharedValue(0),
-    particleOpacity: useSharedValue(0.6),
-    tailOpacity:     useSharedValue(0.15),
-    sparkleOpacity:  useSharedValue(0),
-    blink:           useSharedValue(1),
-    posX:            useSharedValue(0),
-    posY:            useSharedValue(0),
-    particleMode:    useSharedValue("idle"),
-    floatPhase,
-    pulsePhase,
-  };
+  const orbScale = useSharedValue(1.0);
+  const orbOpacity = useSharedValue(0.7);
+  const glowIntensity = useSharedValue(0.35);
+  const floatOffset = useSharedValue(0);
+  const pulseValue = useSharedValue(0);
+  const particleOpacity = useSharedValue(0.6);
+  const tailOpacity = useSharedValue(0.15);
+  const sparkleOpacity = useSharedValue(0);
+  const blink = useSharedValue(1);
+  const posX = useSharedValue(0);
+  const posY = useSharedValue(0);
+  const particleMode = useSharedValue("idle");
+
+  // Memoize the returned object so its identity is STABLE across renders. The
+  // state-transition effect in PipWisp.tsx depends on `v`; if the object were
+  // recreated every render, the effect would re-run (and cancel the idle loop)
+  // on every parent re-render even when the state never changed.
+  return useMemo(
+    () => ({
+      orbScale,
+      orbOpacity,
+      glowIntensity,
+      floatOffset,
+      pulseValue,
+      particleOpacity,
+      tailOpacity,
+      sparkleOpacity,
+      blink,
+      posX,
+      posY,
+      particleMode,
+      floatPhase,
+      pulsePhase,
+    }),
+    [orbScale, orbOpacity, glowIntensity, floatOffset, pulseValue,
+     particleOpacity, tailOpacity, sparkleOpacity, blink, posX, posY,
+     particleMode, floatPhase, pulsePhase],
+  );
 }
 
 // ──────────────────────────────────────────────
 //  Idle loop: float + pulse + blink
 // ──────────────────────────────────────────────
-
-let idleLoopRunning = false;
 
 // Reduced-motion guard (device accessibility setting). When on, every loop and
 // one-shot is suppressed so PIP stays a static, calm presence (App Motion Spec §6).
@@ -233,10 +253,21 @@ export function setReduceMotion(on: boolean) {
   reduceMotionActive = on;
 }
 
+// Per-instance blink guard. Blink is a separate owner decision (the canonical
+// pip-300px.png can't blink as-is) and animates a currently-unrendered value;
+// its timer chain starts once per instance so repeated startIdleLoop calls do
+// not spawn duplicate setTimeout chains.
+const blinkStarted = new WeakSet<object>();
+
 function startIdleLoop(v: PipAnimationValues, config: StateConfig) {
   if (reduceMotionActive) return;
-  if (idleLoopRunning) return;
-  idleLoopRunning = true;
+
+  // Cancel any loop animations already running on THIS instance's shared values
+  // before (re)starting. This makes the idle-loop lifecycle per-instance (each
+  // instance owns its own shared values) and idempotent — no global flag needed.
+  cancelAnimation(v.floatOffset);
+  cancelAnimation(v.posX);
+  cancelAnimation(v.pulseValue);
 
   // Vertical float (designer spec: ±4pt, ~3s cycle, sine-based)
   v.floatOffset.value = withRepeat(
@@ -286,6 +317,9 @@ function startIdleLoop(v: PipAnimationValues, config: StateConfig) {
 }
 
 function startBlinkLoop(v: PipAnimationValues) {
+  if (blinkStarted.has(v.blink)) return;
+  blinkStarted.add(v.blink);
+
   const scheduleBlink = () => {
     if (reduceMotionActive) return;
     const delay = 5000 + Math.random() * 5000; // 5-10s
@@ -302,8 +336,10 @@ function startBlinkLoop(v: PipAnimationValues) {
   scheduleBlink();
 }
 
-export function cancelIdleLoop() {
-  idleLoopRunning = false;
+export function cancelIdleLoop(v: PipAnimationValues) {
+  cancelAnimation(v.floatOffset);
+  cancelAnimation(v.posX);
+  cancelAnimation(v.pulseValue);
 }
 
 // ──────────────────────────────────────────────
@@ -366,7 +402,7 @@ export function animateToState(v: PipAnimationValues, state: PipState) {
   }
 
   // Idle loop restart
-  cancelIdleLoop();
+  cancelIdleLoop(v);
   startIdleLoop(v, config);
 
   // For "remembered" — return to idle after designer spec duration (~2s hold + transition)
