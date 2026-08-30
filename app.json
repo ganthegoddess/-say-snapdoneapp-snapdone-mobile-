@@ -9,7 +9,7 @@
     "scheme": "snapdone",
     "userInterfaceStyle": "light",
     "ios": {
-      "buildNumber": "19",
+      "buildNumber": "20",
       "supportsTablet": true,
       "bundleIdentifier": "com.snapdoneapp.app",
       "infoPlist": {
