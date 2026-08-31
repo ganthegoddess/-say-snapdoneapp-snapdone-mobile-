@@ -146,10 +146,20 @@ export default function ActionDetailScreen() {
       if (action.due_date) {
         try {
           const permitted = await requestNotifPermissions();
+          const memoryTitle = action.title?.trim();
+          const memoryContext = action.description?.trim();
+          const memoryBody = [
+            `You asked me to remember this: "${memoryTitle || "this"}"`,
+            memoryContext && memoryContext.toLowerCase() !== "null" && memoryContext.toLowerCase() !== "undefined"
+              ? memoryContext
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" — ");
           reminderScheduled = permitted
             ? await scheduleReminder({
-                title: `Reminder: ${action.title}`,
-                body: action.description || "",
+                title: "💛 PIP remembered something…",
+                body: memoryBody,
                 date: new Date(parseMemoryDate(action.due_date).getTime() - 15 * 60 * 1000),
                 actionId: id,
               })
