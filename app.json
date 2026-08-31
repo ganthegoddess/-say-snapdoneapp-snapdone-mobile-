@@ -19,7 +19,8 @@
         "NSRemindersUsageDescription": "SnapDone creates reminders from your captured documents and voice notes.",
         "NSCalendarsUsageDescription": "SnapDone adds events from flyers, appointment cards, and travel confirmations to your calendar.",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "appleTeamId": "WKFTB6L92H"
     },
     "android": {
       "adaptiveIcon": {
@@ -71,7 +72,8 @@
             "newArchEnabled": true
           }
         }
-      ]
+      ],
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true
