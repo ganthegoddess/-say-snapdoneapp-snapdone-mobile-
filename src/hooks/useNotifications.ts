@@ -59,11 +59,18 @@ export function useNotifications() {
     async ({ title, body, date, actionId }: ScheduleReminderParams): Promise<boolean> => {
       // A reminder scheduled in the past throws ERR_NOTIFICATIONS_FAILED_TO_SCHEDULE.
       if (!date || date.getTime() <= Date.now()) return false;
+      // Defensive: reject the literal "null"/"undefined" strings the backend can
+      // leak, plus empty/whitespace — a SnapBack must NEVER surface a bare "null".
+      const cleanBody = (body ?? "").trim();
+      const isLiteralNullish =
+        cleanBody.length === 0 ||
+        cleanBody.toLowerCase() === "null" ||
+        cleanBody.toLowerCase() === "undefined";
       try {
         await Notifications.scheduleNotificationAsync({
           content: {
             title,
-            body: body || "Tap to view details",
+            body: isLiteralNullish ? "Tap to view details" : cleanBody,
             data: { actionId, type: "reminder" },
             sound: true,
           },
