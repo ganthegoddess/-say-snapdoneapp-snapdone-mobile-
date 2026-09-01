@@ -146,7 +146,11 @@ export default function ActionDetailScreen() {
       if (action.due_date) {
         try {
           const permitted = await requestNotifPermissions();
-          const memoryTitle = action.title?.trim();
+          const rawTitle = action.title?.trim();
+          const memoryTitle =
+            rawTitle && rawTitle.toLowerCase() !== "null" && rawTitle.toLowerCase() !== "undefined"
+              ? rawTitle
+              : "";
           const memoryContext = action.description?.trim();
           const memoryBody = [
             `You asked me to remember this: "${memoryTitle || "this"}"`,

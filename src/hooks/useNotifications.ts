@@ -70,7 +70,7 @@ export function useNotifications() {
         await Notifications.scheduleNotificationAsync({
           content: {
             title,
-            body: isLiteralNullish ? "Tap to view details" : cleanBody,
+            body: isLiteralNullish ? "It's time for your reminder." : cleanBody,
             data: { actionId, type: "reminder" },
             sound: true,
           },
