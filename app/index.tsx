@@ -27,8 +27,8 @@ export default function IndexScreen() {
     return <Redirect href="/onboarding" />;
   }
 
-  // Authenticated — go to tabs
-  return <Redirect href="/(tabs)" />;
+  // Authenticated — cold start opens to PIP alone (open-intro), then Home.
+  return <Redirect href="/open-intro" />;
 }
 
 const styles = StyleSheet.create({
