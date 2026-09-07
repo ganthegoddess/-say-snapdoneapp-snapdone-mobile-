@@ -8,6 +8,12 @@
     "icon": "./src/assets/images/icon.png",
     "scheme": "snapdone",
     "userInterfaceStyle": "light",
+    "updates": {
+      "url": "https://u.expo.dev/63ac5dcc-bee8-4522-90d9-05587e01c866"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "buildNumber": "22",
       "supportsTablet": true,
