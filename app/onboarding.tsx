@@ -8,6 +8,7 @@ import { PressScale } from "../src/components/ui/PressScale";
 import { Icon } from "../src/components/ui/icons";
 import { useAuthStore } from "../src/stores/authStore";
 import { pip, fill, HOME_CAPTURE_ACTIONS } from "../src/constants/pipCopy";
+import { FEATURES } from "../src/constants/features";
 
 /** FILLED premium capture-pill fill (owner B direction): full-opacity brand tint gradient. */
 function tintFill(base: string): [string, string] {
@@ -24,7 +25,11 @@ export default function OnboardingScreen() {
   // not back to the sign-up screen (was a dead-end loop).
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
-  const exitRoute = token ? "/open-intro" : "/(auth)/sign-up";
+  const exitRoute = token
+    ? FEATURES.OPEN_INTRO
+      ? "/open-intro"
+      : "/(tabs)"
+    : "/(auth)/sign-up";
 
   const handleDone = () => router.replace(exitRoute);
 

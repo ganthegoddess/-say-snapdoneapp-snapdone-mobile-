@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { View, ActivityIndicator, Text, StyleSheet } from "react-native";
 import { Redirect } from "expo-router";
 import { useAuthStore } from "../src/stores/authStore";
+import { FEATURES } from "../src/constants/features";
 
 export default function IndexScreen() {
   const token = useAuthStore((state) => state.token);
@@ -28,7 +29,8 @@ export default function IndexScreen() {
   }
 
   // Authenticated — cold start opens to PIP alone (open-intro), then Home.
-  return <Redirect href="/open-intro" />;
+  // Feature-flagged: FEATURES.OPEN_INTRO=false restores the legacy straight-to-Home path.
+  return <Redirect href={FEATURES.OPEN_INTRO ? "/open-intro" : "/(tabs)"} />;
 }
 
 const styles = StyleSheet.create({
