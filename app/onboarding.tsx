@@ -24,7 +24,7 @@ export default function OnboardingScreen() {
   // not back to the sign-up screen (was a dead-end loop).
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
-  const exitRoute = token ? "/(tabs)" : "/(auth)/sign-up";
+  const exitRoute = token ? "/open-intro" : "/(auth)/sign-up";
 
   const handleDone = () => router.replace(exitRoute);
 
