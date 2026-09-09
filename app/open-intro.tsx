@@ -14,6 +14,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withDelay,
+  runOnJS,
   Easing,
 } from "react-native-reanimated";
 import { PipWisp } from "../src/components/PipWisp";
@@ -58,11 +59,6 @@ export default function OpenIntroScreen() {
   const user = useAuthStore((s) => s.user);
   const { height } = useWindowDimensions();
 
-  // Legacy behavior when the intro is switched off (Beta Freeze / kill switch).
-  if (!FEATURES.OPEN_INTRO) {
-    return <Redirect href="/(tabs)" />;
-  }
-
   // ── Reveal shared values (all native driver) ────────────────────────────
   // rise  0→1 : PIP floats up 720 → 390 over ~350ms (spec §2).
   // settle 0→1 : gentle 1.03 → 1 settle over ~350ms (350–700ms).
@@ -71,17 +67,19 @@ export default function OpenIntroScreen() {
   const settle = useSharedValue(0);
   const panel = useSharedValue(0);
 
-  // Reduced-motion + double-tap guards
+  // Reduced-motion + double-tap + mounted guards
   const reduceMotion = useRef(false);
   const isRevealing = useRef(false);
+  const mounted = useRef(true);
 
   useEffect(() => {
-    let mounted = true;
+    let alive = true;
     AccessibilityInfo.isReduceMotionEnabled().then((on) => {
-      if (mounted) reduceMotion.current = on;
+      if (alive) reduceMotion.current = on;
     });
     return () => {
-      mounted = false;
+      alive = false;
+      mounted.current = false;
     };
   }, []);
 
@@ -102,6 +100,14 @@ export default function OpenIntroScreen() {
     transform: [{ translateY: 12 * (1 - panel.value) }],
   }));
 
+  // Hand off to Home — a plain JS callback driven from the reveal's completion
+  // (via runOnJS) so navigation never races the unmount. Guarded by `mounted`
+  // and `isRevealing` so a cancelled/unmounted reveal can't navigate twice.
+  const goHome = () => {
+    if (!mounted.current || !isRevealing.current) return;
+    router.replace("/(tabs)");
+  };
+
   const handleTap = () => {
     // Single tap only — taps during the transition are ignored.
     if (isRevealing.current) return;
@@ -116,17 +122,34 @@ export default function OpenIntroScreen() {
     // Spec §2 timing: PIP rises (0–350ms, cubic), settle (350–700ms), and the
     // greeting + pills fade in beneath (120–500ms, ease), staggered.
     rise.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) });
-    settle.value = withDelay(350, withTiming(1, { duration: 350, easing: Easing.out(Easing.ease) }));
     panel.value = withDelay(120, withTiming(1, { duration: 380, easing: Easing.out(Easing.ease) }));
 
-    // Hand off to Home once the reveal settles (~700ms total).
-    setTimeout(() => router.replace("/(tabs)"), 700);
+    // Hand off to Home when the settle completes (~700ms total). Driven by the
+    // animation's own completion callback on the UI thread (not a JS timer), so
+    // navigation can't fire while the reveal is still animating — the race that
+    // crashed bn22 when the JS timer beat the settle animation and the screen
+    // unmounted mid-animation.
+    settle.value = withDelay(
+      350,
+      withTiming(1, { duration: 350, easing: Easing.out(Easing.ease) }, (finished) => {
+        "worklet";
+        if (finished) {
+          runOnJS(goHome)();
+        }
+      }),
+    );
   };
 
   // Settled greeting copy — the §3 canonical opener ("Share with me — I've got
   // it.") via the single copy source. Greetings remain Phase-2 for the open
   // state itself; this is the reveal content that lands beneath PIP.
   const g = greetingLine(user?.displayName, { memoryCount: 3, outstanding: 0, overdue: 0 });
+
+  // Legacy behavior when the intro is switched off (Beta Freeze / kill switch).
+  // Placed after every hook above, so the hook order stays constant.
+  if (!FEATURES.OPEN_INTRO) {
+    return <Redirect href="/(tabs)" />;
+  }
 
   return (
     <View style={styles.container}>
